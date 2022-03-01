@@ -49,22 +49,6 @@ def dilate(img=None):
     return res
 
 
-def line():
-    img = cv.imread('../resources/path/cap-10.png')
-    prc = dilate(img)
-    res = cv.threshold(prc, 0, 255, cv.THRESH_BINARY_INV)[1]
-    edges = cv.Canny(res, 51, 113)
-    show(edges)
-    lines = cv.HoughLinesP(edges, 3, np.pi / 180, threshold=60, minLineLength=5, maxLineGap=10)
-    pale = np.zeros(img.shape)
-    for points in lines:
-        x1, y1, x2, y2 = points[0]
-        dx, dy = abs(x1 - x2), abs(y1 - y2)
-        if dx > 30 or dy > 30:
-            cv.line(pale, (x1, y1), (x2, y2), (0, 255, 255), 2)
-    show(pale)
-
-
 def thresh(img=None):
     # img = cv.imread('../resources/path/cap-1.png')
     res = dilate(img)

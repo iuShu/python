@@ -80,16 +80,8 @@ def account(wc: WinControl, lt, br):
 
 def daily_checkin(wc: WinControl):
     wc.click((220, 500), 1)
-    # wc.match_randclk(QUEST)
-    # wc.match_randclk(CHECKIN)
-    # wc.match_randclk(CLOSE, gaussian=False)
+    # click check-in by fix pos
     wc.click((866, 90))
-
-    # cap = wc.capture()
-    # img = cap[cap.shape[0]//4*3:, :cap.shape[1]//3]
-    # show(img)
-    # lt, rb = matches(img, cv.imread('../resources/quest2.png'))
-    # show_match(img, lt, rb)
 
 
 def enough_power(wc: WinControl):
@@ -127,16 +119,41 @@ def reg_role(wc: WinControl):
 def start_dungeon(wc: WinControl, roles):
     wc.match_randclk(DUNGEON)
     wc.match_randclk(LEVEL)
-    wc.match_action(BACK, lambda wc, lp, rp: print('Entered Dungeon'))
+    wc.match_action(BACK, lambda wct, lp, rp: print('Entered Dungeon'))
 
     discover(wc, roles)
 
     wc.match_randclk(BACK)
-    wc.match_action(MAIN, lambda wc, lp, rp: print('Back to Main'))
+    wc.match_action(MAIN, lambda wct, lp, rp: print('Back to Main'))
     if enough_power(wc):
         start_dungeon(wc, roles)
     else:
         log_out(wc)
+
+
+def adventure(wc: WinControl, roles):
+    """
+        kara = Kara(wc.handle, roles)
+        for i in range(5):
+            if not kara.available():    # check power and healthy
+                break
+
+            mst = kara.find_monster()
+            if not mst:
+                nxt = kara.forward()
+                wc.click(nxt)
+                time.sleep(2)           # moving
+                continue
+
+            wc.click(mst)
+            btl = Battle(kara)
+            btl.fight()
+
+        wc.match_action(BACK, lambda wct, lp, rp: print('Quited Dungeon'))
+        if enough_power():
+            adventure(wc)
+    """
+    pass
 
 
 def discover(wc: WinControl, roles):
@@ -169,7 +186,7 @@ def find_monster(wc: WinControl):
 
 
 def fight(wc: WinControl):
-    wc.match_action(ROUND, lambda wc, lt, br: print('Start Fight'))
+    wc.match_action(ROUND, lambda wct, lt, br: print('Start Fight'))
     pass
 
 
@@ -180,13 +197,13 @@ def log_out(wc: WinControl):
 
 if __name__ == '__main__':
     # workflow()
-    wc = WinControl('雷电模拟器')
+    wcl = WinControl('雷电模拟器')
     # open_kara(wc)
     # account(wc)
     # daily_checkin(wc)
     # print(enough_power(wc))
     # reg_role(wc)
     # start_dungeon(wc)
-    log_out(wc)
+    log_out(wcl)
     # fight(wc)
 
