@@ -1,3 +1,4 @@
+import ctypes
 import time
 
 import numpy as np
@@ -58,11 +59,30 @@ class Simulator(object):
 
 if __name__ == '__main__':
     s = Simulator('雷电模拟器')
+
+    print(s.handle, s.hwnd)
+    # cap = utils.capture3(s.handle)
+    # script.utils.show(cap)
+    from ctypes import windll, byref
+    from ctypes.wintypes import RECT
+    rect = RECT()
+    windll.user32.GetWindowRect(s.handle, byref(rect))
+    width, height = rect.right - rect.left, rect.bottom - rect.top
+
+    from OpenGL import GL, images
+    from OpenGL.GL import glReadPixels, glPixelStorei, GLubyte
+    from PIL import Image
+    windll.opengl32.wglMakeCurrent(s.handle)
+    size = width * height * 4
+    buffer = glReadPixels(0, 0, width, height, GL.GL_RGB, GL.GL_UNSIGNED_BYTE)
+    print(type(buffer))
+
     # s.click(())
     # s.typing('hentonwu128@outlook.com')
     # s.press('return')
-    s.cpress('lcontrol,a')
-    s.press('delete')
+    # s.cpress('lcontrol,a')
+    # s.press('delete')
+
 
 
 

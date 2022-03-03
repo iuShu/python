@@ -35,17 +35,6 @@ def winCapture(handle):
     return np.frombuffer(buffer, dtype=np.uint8).reshape((height, width, 4))
 
 
-def capture2(handle):
-    from PyQt5.QtWidgets import QApplication
-    app = QApplication(sys.argv)
-    screen = QApplication.primaryScreen()
-    img = screen.grabWindow(handle).toImage()
-    w, h, c = img.width(), img.height(), img.depth() // 8
-    arr = img.bits().asstring(w * h * c)
-    cap = np.fromstring(arr, dtype=np.uint8).reshape((h, w, c))
-    return cap
-
-
 def match(screen, template, gray=True, gaussian=True, threshold=GOOD_THRESHOLD):
     if gray:
         screen = cv.cvtColor(screen, cv.COLOR_BGR2GRAY)
