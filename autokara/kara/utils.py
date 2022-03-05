@@ -14,27 +14,6 @@ SIFT = cv.SIFT_create()
 FLANN = cv.FlannBasedMatcher(dict(algorithm=1, trees=5), dict(checks=50))
 
 
-def winCapture(handle):
-    rect = wintypes.RECT()
-    windll.user32.GetClientRect(handle, byref(rect))
-    width, height = rect.right, rect.bottom
-
-    dc = windll.user32.GetDC(handle)
-    cdc = windll.gdi32.CreateCompatibleDC(dc)
-    bitmap = windll.gdi32.CreateCompatibleBitmap(dc, width, height)
-    windll.gdi32.SelectObject(cdc, bitmap)
-    windll.gdi32.BitBlt(cdc, 0, 0, width, height, dc, 0, 0, win32con.SRCCOPY)
-
-    total_bytes = width * height * 4
-    buffer = bytearray(total_bytes)
-    byte_array = c_ubyte * total_bytes
-    windll.gdi32.GetBitmapBits(bitmap, total_bytes, byte_array.from_buffer(buffer))
-    windll.gdi32.DeleteObject(bitmap)
-    windll.gdi32.DeleteObject(cdc)
-    windll.user32.ReleaseDC(handle, dc)
-    return np.frombuffer(buffer, dtype=np.uint8).reshape((height, width, 4))
-
-
 def match(screen, template, gray=True, gaussian=True, threshold=GOOD_THRESHOLD):
     if gray:
         screen = cv.cvtColor(screen, cv.COLOR_BGR2GRAY)
@@ -85,10 +64,15 @@ def grab_cut(img, rect):
 
 
 def cooldown(cfk: str):
-    time.sleep(config.instance().getint('kara', f'{cfk}.cooldown') / 1000)
+    time.sleep(config.instance().getint('kara', cfk + '.cooldown') / 1000)
+
+
+def pos(cfk: str):
+    return tuple(map(int, config.instance().get('kara', cfk + '.pos')))
 
 
 def rect_center(lt, rb):
-    lt, rb = np.array(lt), np.array(rb)
-    return np.add(lt[0], (rb[1] - lt[0]) // 2)
+    if not isinstance(lt, np.ndarray):
+        lt, rb = np.array(lt), np.array(rb)
+    return np.add(lt, np.array(np.array(rb - lt) // 2))
 

@@ -45,9 +45,12 @@ class Configuration(object):
         with open(self.path) as f:
             for line in f.readlines():
                 line = line.strip()
-                if line:
+                if line and not line.startswith('#'):
                     seg = line.split('=')
-                    self.props[seg[0]] = seg[1]
+                    if ',' not in seg[1]:
+                        self.props[seg[0]] = seg[1]
+                    else:
+                        self.props[seg[0]] = seg[1].split(',')
 
     def __str__(self):
         return self.path + '\n' + self.props.__str__()

@@ -4,26 +4,26 @@
     open kara to allow the device permissions of the simulator
     copy 3 simulator after above steps are finished
 """
-
 import time
 
 from constants import *
 from kara import utils
-from kara.utils import cooldown
-from kara.simulator import Simulator
 from kara.account import AccountManager
 from kara.dungeon import Dungeon, Kara
-from config import config
+from kara.simulator import Simulator
+from kara.manager import Manager
+from kara.utils import cooldown
 
 
 def startup():
-    sml = Simulator(TITLE)
+    manager = Manager()
+    sml = manager.create()
     acm = AccountManager()
 
     sml.match_click(KARA_ICON)
+    cooldown('apk.startup')
     sml.match_click(EMADDR)
-    sml.match(READY)
-
+    cooldown('email.panel')
     acc = acm.obtain()
     if not acc:
         return
@@ -42,30 +42,31 @@ def startup():
 
 
 def login(sml: Simulator, acc):
-    # click email input bar
+    sml.click(utils.pos('email.input'))
+    time.sleep(.2)
     sml.cpress('lcontrol,a')
     sml.press('delete')
     sml.typing(acc[0])
     sml.press('return')
     cooldown('account.input')
-    # click password input bar
+    sml.click(utils.pos('password.input'))
+    time.sleep(.2)
     sml.cpress('lcontrol,a')
     sml.press('delete')
     sml.typing(acc[1])
     sml.press('return')
     cooldown('account.input')
-    # click login button
+    sml.click(utils.pos('login.button'))
     sml.match(MAIN)
 
 
 def checkin(sml: Simulator):
-    # click quest button
+    sml.click(utils.pos('quest.button'))
     cooldown('quest.panel')
-    # click checkin button
+    sml.click(utils.pos('quest.checkin.button'))
     cooldown('quest.panel')
-    # click close button
-    cooldown('panel.quick')
-    pass
+    sml.click(utils.pos('quest.checkin.close'))
+    cooldown('panel.quit')
 
 
 def main_role(sml: Simulator):

@@ -110,8 +110,9 @@ def cpress(hwnd, ckey: str):
         WinMessage(hwnd, win32con.WM_KEYUP, r[0], (r[1] << 16) | 0XC0000001)
 
 
-def click(hwnd, p):
-    spos = win32gui.ScreenToClient(hwnd, p)
+def click(hwnd, p: tuple):
+    x, y, w, h = win32gui.GetWindowRect(hwnd)
+    spos = win32gui.ScreenToClient(hwnd, (p[0] + x, p[1] + y))
     wpos = win32api.MAKELONG(spos[0], spos[1])
     WinMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, wpos)
     time.sleep(CLICK_DURATION)
