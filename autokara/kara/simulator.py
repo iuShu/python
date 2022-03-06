@@ -76,8 +76,9 @@ class Simulator(object):
 
 
 if __name__ == '__main__':
-    s = Simulator('雷电模拟器', 0, '127.0.0.1:5555')
-    cv.imwrite('../resources/area/cap.png', s.capture())
+    s = Simulator('雷电模拟器', 0, 'emulator-5554')
+    # cv.imwrite('../resources/area/cap.png', s.capture())
     # acm = kara.account.AccountManager()
     # autokara.login(s, acm.obtain())
     # autokara.checkin(s)
+    # autokara.avt_power(s)

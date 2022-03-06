@@ -1,17 +1,27 @@
-import sys
 import time
-from ctypes import windll, byref, c_ubyte, wintypes
-from config import config
+from ctypes import windll
 
 import cv2 as cv
 import numpy as np
-import win32con
+
+from config import config
 
 windll.user32.SetProcessDPIAware()
 RED = (0, 0, 255)
 GOOD_THRESHOLD = 8
 SIFT = cv.SIFT_create()
 FLANN = cv.FlannBasedMatcher(dict(algorithm=1, trees=5), dict(checks=50))
+
+
+def tmatch(screen, template):
+    h, w, d = template.shape
+    res = cv.matchTemplate(screen, template, cv.TM_CCOEFF)
+    miv, mav, mil, mal = cv.minMaxLoc(res)
+    lt, rb = mal, (mal[0] + w, mal[1] + h)
+    cv.rectangle(screen, lt, rb, 255, 2)
+    # cv.imshow('img', screen)
+    # cv.waitKey(0)
+    return lt, rb
 
 
 def match(screen, template, gray=True, gaussian=True, threshold=GOOD_THRESHOLD):
@@ -51,7 +61,7 @@ def match(screen, template, gray=True, gaussian=True, threshold=GOOD_THRESHOLD):
         return None, None
 
 
-def grab_cut(img, rect):
+def grab_cut(img, rect) -> np.ndarray:
     mask = np.zeros(img.shape[:2], np.uint8)
     bgm = np.zeros((1, 65), np.float64)
     fgm = np.zeros((1, 65), np.float64)
@@ -67,11 +77,11 @@ def cooldown(cfk: str):
     time.sleep(config.instance().getint('kara', cfk + '.cooldown') / 1000)
 
 
-def pos(cfk: str):
+def pos(cfk: str) -> tuple:
     return tuple(map(int, config.instance().get('kara', cfk + '.pos')))
 
 
-def rect_center(lt, rb):
+def rect_center(lt, rb) -> np.ndarray:
     if not isinstance(lt, np.ndarray):
         lt, rb = np.array(lt), np.array(rb)
     return np.add(lt, np.array(np.array(rb - lt) // 2))
