@@ -6,9 +6,6 @@
 """
 import time
 
-import cv2
-import pytesseract
-
 import script.textocr
 from constants import *
 from kara import utils
@@ -35,6 +32,10 @@ def startup():
     checkin(sml)
 
     power = avt_power(sml)
+    print('available power', power)
+    if not power:
+        return
+
     # if power:
     #     roles = main_role(sml)
     #     role = Kara(roles)
@@ -76,7 +77,7 @@ def avt_power(sml: Simulator) -> int:
     lt, rb = utils.pos('power.left.top'), utils.pos('power.right.bottom')
     roi = sml.capture()[lt[1]:rb[1], lt[0]:rb[0]]
     txt = script.textocr.text_recognize(roi)
-    if len(txt) > 5:
+    if not txt or len(txt) > 5:
         return 0
 
     available = int(txt.split('/')[0])

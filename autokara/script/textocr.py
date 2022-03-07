@@ -1,8 +1,12 @@
+import subprocess
 import cv2 as cv
 import numpy as np
-import pytesseract
 
 from script import utils
+from config import config
+from subprocess import PIPE
+
+OCR_EXE_PATH = config.instance().get('kara', 'tesseract.path')
 
 
 def roi_rect(img):
@@ -30,8 +34,14 @@ def roi_rect(img):
 def text_recognize(img):
     area = roi_rect(img)
     area = cv.resize(area, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
-    text = pytesseract.image_to_string(area)
-    return text
+    cv.imwrite('../resources/temp/ocr.png', area)
+    root = utils.project_root()
+    cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr.png stdout'
+    prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = prc.communicate()
+    if prc.returncode == 0:
+        return out.decode().strip()
+    raise RuntimeError('tesseract recognize error')
 
 
 def practice():
@@ -49,3 +59,7 @@ if __name__ == '__main__':
     # print(text_recognize(image))
 
     practice()
+
+
+
+

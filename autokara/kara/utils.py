@@ -4,6 +4,7 @@ from ctypes import windll
 import cv2 as cv
 import numpy as np
 
+import script.utils
 from config import config
 
 windll.user32.SetProcessDPIAware()
@@ -25,22 +26,22 @@ def tmatch(screen, template):
 
 
 def match(screen, template, gray=True, gaussian=True, threshold=GOOD_THRESHOLD):
-    if gray:
-        screen = cv.cvtColor(screen, cv.COLOR_BGR2GRAY)
-        template = cv.cvtColor(template, cv.COLOR_BGR2GRAY)
-    if gaussian:
-        screen = cv.GaussianBlur(screen, (5, 5), 0)
-        template = cv.GaussianBlur(template, (5, 5), 0)
-    kp1, des1 = SIFT.detectAndCompute(template, None)
-    kp2, des2 = SIFT.detectAndCompute(screen, None)
-
-    good = []
-    for m, n in FLANN.knnMatch(des1, des2, k=2):
-        if m.distance < 0.7 * n.distance:
-            good.append(m)
-
-    # print('good: ', len(good), len(good) >= threshold)
     try:
+        if gray:
+            screen = cv.cvtColor(screen, cv.COLOR_BGR2GRAY)
+            template = cv.cvtColor(template, cv.COLOR_BGR2GRAY)
+        if gaussian:
+            screen = cv.GaussianBlur(screen, (5, 5), 0)
+            template = cv.GaussianBlur(template, (5, 5), 0)
+        kp1, des1 = SIFT.detectAndCompute(template, None)
+        kp2, des2 = SIFT.detectAndCompute(screen, None)
+
+        good = []
+        for m, n in FLANN.knnMatch(des1, des2, k=2):
+            if m.distance < 0.7 * n.distance:
+                good.append(m)
+
+        # print('good: ', len(good), len(good) >= threshold)
         if len(good) >= threshold:
             src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
             dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
@@ -58,6 +59,8 @@ def match(screen, template, gray=True, gaussian=True, threshold=GOOD_THRESHOLD):
             return None, None
     except cv.error:
         print('Error occur during template matching')
+        # script.utils.show(screen, title='screen')
+        # script.utils.show(template, title='template')
         return None, None
 
 

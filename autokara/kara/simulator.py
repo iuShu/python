@@ -1,5 +1,4 @@
 import subprocess
-import time
 from subprocess import PIPE
 
 import cv2 as cv
@@ -7,17 +6,11 @@ import numpy as np
 import win32con
 import win32gui
 
-import kara.account
 from config import config
-from kara import action, utils, autokara
-
-CAPTURE_PATH = config.instance().get('kara', 'capture.path')
-CAPTURE_NAME = config.instance().get('kara', 'capture.file.name')
-CAPTURE_WAIT_TIME = config.instance().getint('kara', 'capture.wait.time') / 1000
-SIMULATOR_PATH = config.instance().get('kara', 'simulator.path')
-S_CAPTURE_PATH = config.instance().get('kara', 'simulator.capture.path')
+from kara import action, utils
 
 WAIT_TIMES = config.instance().getint('kara', 'simulator.wait.times')
+SIMULATOR_PATH = config.instance().get('kara', 'simulator.path')
 
 
 class Simulator(object):
@@ -76,9 +69,5 @@ class Simulator(object):
 
 
 if __name__ == '__main__':
-    s = Simulator('雷电模拟器', 0, 'emulator-5554')
+    s = Simulator('雷电模拟器', 0, '127.0.0.1:5555')
     # cv.imwrite('../resources/area/cap.png', s.capture())
-    # acm = kara.account.AccountManager()
-    # autokara.login(s, acm.obtain())
-    # autokara.checkin(s)
-    # autokara.avt_power(s)

@@ -4,8 +4,6 @@ import time
 import win32api
 import win32con
 
-import kara.simulator
-import script.utils
 from config import config
 from simulator import Simulator
 
@@ -37,8 +35,19 @@ class Manager(object):
     @staticmethod
     def init_adb():
         sml_path = config.instance().get('kara', 'simulator.path')
+
+        prc = os.popen(sml_path + 'ldconsole list2')
+        txt = prc.read().strip()
+        if txt.endswith('-1,-1'):
+            raise RuntimeError('simulator not running')
+        prc.close()
+
+        prc = os.popen('TASKLIST /FI "IMAGENAME eq adb.exe"')
+        if len(prc.readlines()) > 2:
+            return
+
         start = time.time()
-        os.system(sml_path + 'adb kill-server')
+        # os.system(sml_path + 'adb kill-server')
         os.system(sml_path + 'adb devices')
         print('init adb cost', time.time() - start)
 

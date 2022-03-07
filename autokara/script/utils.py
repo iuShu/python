@@ -1,3 +1,4 @@
+import os
 import random
 
 import cv2 as cv
@@ -155,3 +156,8 @@ def grab_cut(img, rect):
 
     mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
     return img * mask2[:, :, np.newaxis]
+
+
+def project_root():
+    package = os.path.split(os.path.realpath(__file__))[0]
+    return package[0:package.rfind('\\')] + '\\'
