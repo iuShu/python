@@ -1,8 +1,11 @@
+import os
 import time
 from ctypes import windll
 
 import cv2 as cv
 import numpy as np
+import win32api
+import win32con
 
 import script.utils
 from config import config
@@ -89,3 +92,17 @@ def rect_center(lt, rb) -> np.ndarray:
         lt, rb = np.array(lt), np.array(rb)
     return np.add(lt, np.array(np.array(rb - lt) // 2))
 
+
+def message(msg, title='Karastar Tips'):
+    win32api.MessageBox(0, msg, title, win32con.MB_OK)
+
+
+def execmd(cmd) -> list:
+    prc = os.popen(cmd)
+    lines = prc.readlines()
+    prc.close()
+    return lines
+
+
+def localtime() -> str:
+    return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())

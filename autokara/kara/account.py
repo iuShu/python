@@ -13,3 +13,10 @@ class AccountManager(object):
         if acc:
             self.idx += 1
             return acc.split('  ')
+
+
+SINGLETON = AccountManager()
+
+
+def instance():
+    return SINGLETON
