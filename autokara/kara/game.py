@@ -1,6 +1,11 @@
 import sys
 
+import win32gui
+import win32api
+import win32con
+
 import kara.action
+import script.utils
 from config import config
 from kara.simulator import Simulator
 from kara.instance import KaraInstance
@@ -18,6 +23,7 @@ class Karastar(object):
         self.init_env()
         self.init_adb()
         self.init_sml()
+        self.init_layout()
 
     def init_env(self):
         lines = execmd(SML_PATH + 'ldconsole list2')
@@ -52,12 +58,45 @@ class Karastar(object):
             ki = KaraInstance(sml)
             self.instances.append(ki)
 
-    def run(self):
-        print(self.instances)
+    def init_layout(self):
         if not self.instances:
             message('no available instance')
             return
 
+        sw = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
+        sh = win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
+        print('screen', sw, sh)
+        rnum = config.instance().getint('kara', 'instance.row.num')
+        cnum = config.instance().getint('kara', 'instance.col.num')
+        dw = config.instance().getint('kara', 'simulator.default.width')
+        dh = config.instance().getint('kara', 'simulator.default.height')
+        xadd, yadd = dw, dh
+        if sw < (rnum * dw):
+            xadd = 50
+        if sh < (cnum * dh):
+            yadd = 50
+
+        fx, fy = 0, 0
+        if xadd == 50:
+            for i in self.instances:
+                handle = i.sml.handle
+                win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
+                fx += xadd
+                fy += yadd
+            return
+
+        idx = 0
+        while fx < sw:
+            while fy < sh:
+                handle = self.instances[idx].sml.handle
+                win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
+                idx += 1
+                fy += yadd
+            fx += xadd
+            fy = 0
+
+    def run(self):
+        print(self.instances)
         for i in self.instances:
             i.start()
         for i in self.instances:
@@ -68,4 +107,3 @@ class Karastar(object):
 if __name__ == '__main__':
     ks = Karastar()
     ks.run()
-

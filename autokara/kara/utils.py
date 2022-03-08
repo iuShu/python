@@ -93,7 +93,7 @@ def rect_center(lt, rb) -> np.ndarray:
     return np.add(lt, np.array(np.array(rb - lt) // 2))
 
 
-def message(msg, title='Karastar Tips'):
+def message(msg, title='Karastar Assistant Tips'):
     win32api.MessageBox(0, msg, title, win32con.MB_OK)
 
 

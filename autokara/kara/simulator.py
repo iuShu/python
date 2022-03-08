@@ -48,13 +48,14 @@ class Simulator(object):
 
     def match(self, template: np.ndarray, gray=True, blur=True, th=utils.GOOD_THRESHOLD, wait=True):
         wt = WAIT_TIMES if wait else 1
+        thn = threading.currentThread().name
         while wt > 0:
             cap = self.capture()
             lt, rb = utils.match(cap, template, gray, blur, th)
             if np.any(lt is not None):
-                # print('match at', wt)
+                print(thn, 'match at', wt)
                 return lt, rb
-            # print('not match at', str(wt))
+            print(thn, 'mismatch at', wt)
             utils.cooldown('simulator.match')
             wt -= 1
         return None, None
