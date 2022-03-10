@@ -94,7 +94,7 @@ def rect_center(lt, rb) -> np.ndarray:
 
 
 def message(msg, title='Karastar Assistant Tips'):
-    win32api.MessageBox(0, msg, title, win32con.MB_OK)
+    win32api.MessageBox(0, msg, title, win32con.MB_OK | win32con.MB_ICONINFORMATION)
 
 
 def execmd(cmd) -> list:
