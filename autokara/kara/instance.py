@@ -19,34 +19,43 @@ class KaraInstance(threading.Thread):
         self.power = 0
         self.sml = sml
         self.acm = account.instance()
+        self.step = 0
+
+    def forward(self):
+        self.step += 1
 
     def run(self):
+        thr_name = threading.currentThread().name
         try:
+            self.forward()
             self.sml.match_click(KARA_ICON)
+            self.forward()
             cooldown('apk.startup')
 
             while True:
+                self.forward()
                 self.sml.match_click(EMADDR)
                 cooldown('email.panel')
+                self.forward()
                 acc = self.get_acc()
                 if not acc:
                     message(self.sml.name + ' finished due to no more account')
                     break
+
                 if not self.login(acc):
                     break
 
                 self.checkin()
-                self.recognize_power()
 
-                # arena battle
+                self.arena()
+
                 print('power', self.power)
-                time.sleep(5)
 
                 self.logout()
         except Exception as e:
-            message(threading.currentThread().name + ' exited with error ' + e.__str__())
+            message(f'{thr_name} exited with error {e.__str__()} at {STEPS[self.step]}')
         else:
-            message(threading.currentThread().name + ' finished at ' + localtime())
+            message(thr_name + ' finished at ' + localtime())
 
     def get_acc(self) -> tuple:
         lock.acquire()
@@ -56,6 +65,7 @@ class KaraInstance(threading.Thread):
             lock.release()
 
     def login(self, acc):
+        self.forward()
         self.sml.click(pos('email.input'))
         time.sleep(.2)
         self.sml.cpress('lcontrol,a')
@@ -75,9 +85,11 @@ class KaraInstance(threading.Thread):
         if np.any(lt is None):
             message('login failure with account ' + acc[0])
             return False
+        self.forward()
         return True
 
     def checkin(self):
+        self.forward()
         self.sml.click(pos('quest.button'))
         cooldown('panel.open')
         self.sml.click(pos('quest.checkin'))
@@ -86,6 +98,7 @@ class KaraInstance(threading.Thread):
         cooldown('panel.quit')
 
     def recognize_power(self):
+        self.forward()
         lt, rb = pos('power.left.top'), pos('power.right.bottom')
         roi = self.sml.capture()[lt[1]:rb[1], lt[0]:rb[0]]
         txt = textocr.text_recognize(roi)
@@ -96,7 +109,23 @@ class KaraInstance(threading.Thread):
         if available >= 1:
             self.power = available
 
+    def arena(self):
+        self.forward()
+
+        pass
+
     def logout(self):
+        self.forward()
         self.sml.click(pos('setting.button'))
         cooldown('panel.open')
         self.sml.click(pos('logout.button'))
+
+
+if __name__ == '__main__':
+    lv = 1
+    for j in range(25):
+        for i in GENERAL.keys():
+            if lv <= i:
+                print(lv, i, GENERAL[i])
+                break
+        lv += 1
