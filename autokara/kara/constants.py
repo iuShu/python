@@ -9,23 +9,6 @@ MAIN = cv.imread('../resources/main_flag.png')
 CHECKIN = cv.imread('../resources/checkin.png')
 ATV_POWER = cv.imread('../resources/atv_power.png')
 
-STEPS = [
-    'ready',
-    'find app icon',
-    'waiting app startup',
-    'find email button',
-    'obtain account',
-    'login ...',    # 5
-    'login ok',
-    'checkin ...',
-    # 'recognize avt power',
-    'enter arena',
-    'recognize ev & lv',
-    'select level',  # 10
-    'arena matching',
-    'arena match ok',
-    'arena mismatch'
-]
 
 ARENA_GENERAL = {
     10: 'arena.general.baby',

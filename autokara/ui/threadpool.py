@@ -11,7 +11,7 @@ class ThreadPool(threading.Thread):
         self.pool = []
         self.tasks = queue.Queue()
         self.init_pool()
-        self.stop = False
+        self.f_stop = False
 
     def init_pool(self):
         for i in range(self.num):
@@ -21,14 +21,14 @@ class ThreadPool(threading.Thread):
             self.pool.append(pt)
 
     def stop(self):
-        self.stop = True
+        self.f_stop = True
 
     def exec(self, task) -> None:
         self.tasks.put(task)
 
     def run(self) -> None:
-        while not self.stop:
-            time.sleep(5)
+        while not self.f_stop:
+            time.sleep(3)
 
 
 class PoolThread(threading.Thread):

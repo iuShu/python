@@ -1,5 +1,8 @@
+import threading
 
 from config import config
+
+lock = threading.Lock()
 
 
 class AccountManager(object):
@@ -9,10 +12,14 @@ class AccountManager(object):
         self.conf = config.instance()
 
     def obtain(self):
-        acc = self.conf.get('account', f'kara.account.{self.idx}')
-        if acc:
-            self.idx += 1
-            return acc.split('  ')
+        lock.acquire()
+        try:
+            acc = self.conf.get('account', f'kara.account.{self.idx}')
+            if acc:
+                self.idx += 1
+                return acc.split('  ')
+        finally:
+            lock.release()
 
 
 SINGLETON = AccountManager()

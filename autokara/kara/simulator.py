@@ -22,6 +22,10 @@ class Simulator(object):
         self.handle = int(handle)
         self.hwnd = int(hwnd)
         self.adb = f'{SIMULATOR_PATH}adb -s {dev} shell '
+        self.f_stop = False
+
+    def stop(self):
+        self.f_stop = True
 
     def capture(self) -> np.ndarray:
         prc = subprocess.Popen(self.adb + 'screencap -p', stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -34,7 +38,6 @@ class Simulator(object):
         return cv.imdecode(met, cv.IMREAD_COLOR)
 
     def click(self, p):
-        print(self.hwnd, tuple(p))
         action.click(self.hwnd, tuple(p))
 
     def press(self, key: str):
@@ -49,13 +52,13 @@ class Simulator(object):
     def match(self, template: np.ndarray, gray=True, blur=True, th=utils.GOOD_THRESHOLD, wait=True):
         wt = WAIT_TIMES if wait else 1
         thn = threading.currentThread().name
-        while wt > 0:
+        while wt > 0 and not self.f_stop:
             cap = self.capture()
             lt, rb = utils.match(cap, template, gray, blur, th)
             if np.any(lt is not None):
                 print(thn, 'match at', wt)
                 return lt, rb
-            print(thn, 'mismatch at', wt)
+            # print(thn, 'mismatch at', wt)
             utils.cooldown('simulator.match')
             wt -= 1
         return None, None

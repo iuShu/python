@@ -1,10 +1,8 @@
-import threading
 import time
 import tkinter
-
-import kara.instance
-from kara import game, instance, simulator
 from tkinter import Tk, ttk, PhotoImage
+
+from kara import game, instance
 from ui import threadpool
 
 
@@ -13,8 +11,9 @@ class KaraWindow(object):
     def __init__(self):
         self.karastar = game.Karastar()
         self.root = None
-        self.devs = []
-        self.executor = threadpool.create(len(self.karastar.instances) + 1)
+        self.widgets = dict()
+        self.wset = set()
+        self.executor = threadpool.create(len(self.karastar.instances) + 2)
         self.init_window()
 
     def init_window(self):
@@ -34,12 +33,12 @@ class KaraWindow(object):
         icon_iend = PhotoImage(file='../resources/ui/iend.png', name='iend')
 
         btn = ttk.Button(root, text='Start', compound=tkinter.LEFT, image='start')
-        btn.bind('<Button-1>', self.on_start)
+        btn.bind('<Button-1>', self.on_control)
         bw, bh = btn.winfo_reqwidth(), btn.winfo_reqheight()
         btn.place(x=w // 2 - (bw // 2), y=10)
 
         ny = 20 + bh
-        label = ttk.Label(root, text='Emulator: ' + str(len(self.devs)))
+        label = ttk.Label(root, text='Emulator: ' + str(len(self.karastar.instances)))
         label.place(x=10, y=ny)
 
         ny += label.winfo_reqheight()
@@ -49,56 +48,129 @@ class KaraWindow(object):
         lb['state'] = tkinter.DISABLED
         lb.bind('<Visibility>', self.create_devices)
 
+        root.protocol('WM_DELETE_WINDOW', self.close)
         self.root = root
         root.mainloop()
 
+    def close(self):
+        self.executor.stop()
+        [i.end() for i in self.karastar.instances]
+        self.root.destroy()
+
     def create_devices(self, event: tkinter.Event):
-        # instances = self.karastar.instances
         master = event.widget
+        instances = self.karastar.instances
 
         def do_create():
-            for i in range(6):
-                widgets = toolbar(master, i, f'simulator-{i}')
+            for i in range(len(instances)):
+                widgets = toolbar(master, i, instances[i].sml.name, self.toolbar_command)
+                obj = KaraWidget(self, instances[i], widgets)
+                self.wset.add(obj)
+                for w in widgets:
+                    self.widgets[w] = obj
                 print('create', i)
-                time.sleep(.2)
+                time.sleep(.1)
         self.executor.exec(do_create)
 
-    def on_start(self, event: tkinter.Event):
+    def on_control(self, event: tkinter.Event):
         btn = event.widget
         txt, state = btn['text'], str(btn['state'])
         btn['state'] = tkinter.DISABLED
 
         def on_event():
-            time.sleep(1)
             if txt == 'Start' and state == tkinter.NORMAL:
-                # create_toolbar(btn)
-                # self.create_devices()
+                [w.start() for w in self.wset]
                 btn['text'] = 'End'
                 btn['image'] = 'end'
                 btn['state'] = 'normal'
             elif txt == 'End' and state == tkinter.NORMAL:
+                [w.end() for w in self.wset]
                 btn['text'] = 'Start'
                 btn['image'] = 'start'
                 btn['state'] = 'normal'
         self.executor.exec(on_event)
 
+    def toolbar_command(self, event):
+        self.widgets[event.widget].on_event(event.widget)
 
-def toolbar(master, idx, name):
-    sml = ttk.Label(master, text=name, width=44, anchor='w', padding=4)
-    desc = ttk.Label(master, text='', width=19, anchor='e', padding=3, background='#e6e6e7')
+
+class KaraWidget(object):
+
+    def __init__(self, kwd: KaraWindow, inst: instance.KaraInstance, widgets: tuple):
+        self.kwd = kwd
+        self.wname = widgets[0]
+        self.wdesc = widgets[1]
+        self.wstart = widgets[2]
+        self.wpause = widgets[3]
+        self.wend = widgets[4]
+        self.inst = inst
+        self.started = False
+
+    def on_event(self, widget: tkinter.Widget):
+        if widget['state'] == tkinter.DISABLED:
+            return
+
+        if widget.winfo_name() == self.wstart.winfo_name():
+            self.start()
+        elif widget.winfo_name() == self.wpause.winfo_name():
+            self.pause()
+        elif widget.winfo_name() == self.wend.winfo_name():
+            self.end()
+
+    def start(self):
+        if self.started:
+            ki, idx = instance.KaraInstance(self.inst.sml), 0
+            instances = self.kwd.karastar.instances
+            for i in range(len(instances)):
+                if instances[i] is self.inst:
+                    idx = i
+                    break
+            self.kwd.karastar.instances[idx] = ki
+            self.inst = ki
+
+        if self.inst.is_alive():
+            self.inst.resume()
+        else:
+            self.inst.desc_widget = self.wdesc
+            self.inst.start()
+            self.started = True
+
+        self.wstart['state'] = tkinter.DISABLED
+        self.wpause['state'] = tkinter.NORMAL
+        self.wend['state'] = tkinter.NORMAL
+
+    def pause(self):
+        self.inst.pause()
+        self.wstart['state'] = tkinter.NORMAL
+        self.wpause['state'] = tkinter.DISABLED
+        self.wend['state'] = tkinter.NORMAL
+
+    def end(self):
+        self.inst.end()
+        self.wstart['state'] = tkinter.NORMAL
+        self.wpause['state'] = tkinter.DISABLED
+        self.wend['state'] = tkinter.DISABLED
+
+
+def toolbar(master, idx, name, command):
+    name = ttk.Label(master, text=name, width=44, anchor='w', padding=4)
+    desc = ttk.Label(master, text='ready', width=19, anchor='e', padding=3, background='#e6e6e7')
     bstart = ttk.Button(master, compound=tkinter.CENTER, image='istart', width=2)
     bpause = ttk.Button(master, compound=tkinter.CENTER, image='ipause', width=2)
     bend = ttk.Button(master, compound=tkinter.CENTER, image='iend', width=2)
     # bstart['state'] = tkinter.DISABLED
     bpause['state'] = tkinter.DISABLED
     bend['state'] = tkinter.DISABLED
+    bstart.bind('<Button-1>', command)
+    bpause.bind('<Button-1>', command)
+    bend.bind('<Button-1>', command)
     nx, ny = 3, idx * 27 + idx * 6 + 6
-    sml.place(x=nx, y=ny)
+    name.place(x=nx, y=ny)
     desc.place(x=nx + 103, y=ny)
     bstart.place(x=nx + 103 + desc.winfo_reqwidth(), y=ny)
     bpause.place(x=nx + 103 + desc.winfo_reqwidth() + bstart.winfo_reqwidth(), y=ny)
     bend.place(x=nx + 103 + desc.winfo_reqwidth() + bstart.winfo_reqwidth() + bpause.winfo_reqwidth(), y=ny)
-    return sml, desc, bstart, bpause, bend
+    return name, desc, bstart, bpause, bend
 
 
 if __name__ == '__main__':

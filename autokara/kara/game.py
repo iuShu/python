@@ -1,14 +1,12 @@
 import sys
 
-import win32gui
 import win32api
 import win32con
+import win32gui
 
-import kara.action
-import script.utils
 from config import config
-from kara.simulator import Simulator
 from kara.instance import KaraInstance
+from kara.simulator import Simulator
 from kara.utils import message, execmd
 
 SML_PATH = config.instance().get('kara', 'simulator.path')
@@ -49,6 +47,7 @@ class Karastar(object):
     def init_sml(self):
         if len(self.sml_list) != len(self.adb_devs):
             message('init error')
+            execmd(SML_PATH + 'adb kill-server')
             sys.exit()
 
         for i in range(len(self.sml_list)):
@@ -70,30 +69,42 @@ class Karastar(object):
         cnum = config.instance().getint('kara', 'instance.col.num')
         dw = config.instance().getint('kara', 'simulator.default.width')
         dh = config.instance().getint('kara', 'simulator.default.height')
-        xadd, yadd = dw, dh
-        if sw < (rnum * dw):
-            xadd = 50
-        if sh < (cnum * dh):
-            yadd = 50
+        # xadd, yadd = dw, dh
+        # if sw < (rnum * dw) - 100:
+        #     xadd = 50
+        # if sh < (cnum * dh) - 30:
+        #     yadd = 50
 
         fx, fy = 0, 0
-        if xadd == 50:
-            for i in self.instances:
-                handle = i.sml.handle
-                win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
-                fx += xadd
-                fy += yadd
-            return
+        # if xadd == 50:
+        #     for i in self.instances:
+        #         handle = i.sml.handle
+        #         win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
+        #         fx += xadd
+        #         fy += yadd
+        #     return
+
+        # idx = 0
+        # while fx < sw:
+        #     while fy < sh:
+        #         handle = self.instances[idx].sml.handle
+        #         win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
+        #         idx += 1
+        #         fy += yadd
+        #     fx += xadd
+        #     fy = 0
 
         idx = 0
-        while fx < sw:
-            while fy < sh:
+        for i in range(rnum):
+            for j in range(cnum):
+                if idx >= len(self.instances):
+                    break
                 handle = self.instances[idx].sml.handle
                 win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
+                fx += dw
                 idx += 1
-                fy += yadd
-            fx += xadd
-            fy = 0
+            fy += dh
+            fx = 0
 
     def run(self):
         print(self.instances)

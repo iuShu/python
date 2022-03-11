@@ -98,10 +98,13 @@ def message(msg, title='Karastar Assistant Tips'):
 
 
 def execmd(cmd) -> list:
-    prc = os.popen(cmd)
-    lines = prc.readlines()
-    prc.close()
-    return lines
+    try:
+        prc = os.popen(cmd)
+        lines = prc.readlines()
+        prc.close()
+        return lines
+    except Exception:
+        return []
 
 
 def localtime() -> str:

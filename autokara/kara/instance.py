@@ -1,131 +1,65 @@
+import queue
 import threading
-import time
 
-import numpy as np
-
-from kara.constants import *
-from kara.simulator import Simulator
-from kara.utils import cooldown, message, pos, localtime
 from kara import account
-from script import textocr
-
-lock = threading.Lock()
+from kara.karaexception import KaraException
+from kara.simulator import Simulator
+from kara.task.tasklist import tasklist
+from kara.utils import cooldown, message
 
 
 class KaraInstance(threading.Thread):
 
     def __init__(self, sml: Simulator):
-        threading.Thread.__init__(self, name='instance-' + sml.name)
-        self.power = 0
+        threading.Thread.__init__(self, name='inst-' + sml.name)
         self.sml = sml
         self.acm = account.instance()
-        self.step = 0
-
-    def forward(self):
-        self.step += 1
+        self.tasks = queue.Queue()
+        self.task = None
+        self.power = 0
+        self.acc = None
+        self.f_pause = False
+        self.f_end = False
+        self.desc_widget = None
 
     def run(self):
-        thr_name = threading.currentThread().name
+        th_name = threading.currentThread().name
+        tasklist(self)
         try:
-            self.forward()
-            self.sml.match_click(KARA_ICON)
-            self.forward()
-            cooldown('apk.startup')
-
-            while True:
-                self.forward()
-                self.sml.match_click(EMADDR)
-                cooldown('email.panel')
-                self.forward()
-                acc = self.get_acc()
-                if not acc:
-                    message(self.sml.name + ' finished due to no more account')
-                    break
-
-                if not self.login(acc):
-                    break
-
-                self.checkin()
-
-                self.arena()
-
-                print('power', self.power)
-
-                self.logout()
+            while not self.f_end:
+                if not self.f_pause:
+                    self.task = self.tasks.get(block=True)
+                    if self.task:
+                        self.task.exec()
+                else:
+                    cooldown('instance.pause')
+        except KaraException as ke:
+            message(f'{th_name} exited with error: {ke.msg}')
         except Exception as e:
-            message(f'{thr_name} exited with error {e.__str__()} at {STEPS[self.step]}')
-        else:
-            message(thr_name + ' finished at ' + localtime())
+            message(f'{th_name} exited with error: {e.__str__()}')
+        print(th_name, 'finished')
 
-    def get_acc(self) -> tuple:
-        lock.acquire()
-        try:
-            return self.acm.obtain()
-        finally:
-            lock.release()
+    def desc(self, txt: str):
+        if txt:
+            self.desc_widget['text'] = self.sml.name + txt
 
-    def login(self, acc):
-        self.forward()
-        self.sml.click(pos('email.input'))
-        time.sleep(.2)
-        self.sml.cpress('lcontrol,a')
-        self.sml.press('delete')
-        self.sml.typing(acc[0])
-        self.sml.press('return')
-        cooldown('account.input')
-        self.sml.click(pos('password.input'))
-        time.sleep(.2)
-        self.sml.cpress('lcontrol,a')
-        self.sml.press('delete')
-        self.sml.typing(acc[1])
-        self.sml.press('return')
-        cooldown('account.input')
-        self.sml.click(pos('login.button'))
-        lt, rb = self.sml.match(MAIN)
-        if np.any(lt is None):
-            message('login failure with account ' + acc[0])
-            return False
-        self.forward()
-        return True
+    def resume(self):
+        self.f_pause = False
 
-    def checkin(self):
-        self.forward()
-        self.sml.click(pos('quest.button'))
-        cooldown('panel.open')
-        self.sml.click(pos('quest.checkin'))
-        cooldown('minor')
-        self.sml.click(pos('quest.close'))
-        cooldown('panel.quit')
+    def pause(self):
+        self.f_pause = True
 
-    def recognize_power(self):
-        self.forward()
-        lt, rb = pos('power.left.top'), pos('power.right.bottom')
-        roi = self.sml.capture()[lt[1]:rb[1], lt[0]:rb[0]]
-        txt = textocr.text_recognize(roi)
-        if not txt or len(txt) > 5:
-            return
+    def end(self):
+        self.sml.stop()
+        self.f_end = True
 
-        available = int(txt.split('/')[0])
-        if available >= 1:
-            self.power = available
+    def obtain_account(self):
+        self.acc = self.acm.obtain()
+        return self.acc
 
-    def arena(self):
-        self.forward()
-
-        pass
-
-    def logout(self):
-        self.forward()
-        self.sml.click(pos('setting.button'))
-        cooldown('panel.open')
-        self.sml.click(pos('logout.button'))
+    def check_power(self):
+        return self.power > 0
 
 
 if __name__ == '__main__':
-    lv = 1
-    for j in range(25):
-        for i in GENERAL.keys():
-            if lv <= i:
-                print(lv, i, GENERAL[i])
-                break
-        lv += 1
+    pass
