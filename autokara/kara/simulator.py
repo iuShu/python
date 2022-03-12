@@ -58,7 +58,7 @@ class Simulator(object):
             if np.any(lt is not None):
                 print(thn, 'match at', wt)
                 return lt, rb
-            # print(thn, 'mismatch at', wt)
+            print(thn, 'mismatch at', wt)
             utils.cooldown('simulator.match')
             wt -= 1
         return None, None

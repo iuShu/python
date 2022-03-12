@@ -16,7 +16,7 @@ def tasklist(inst):
     queue.put(create(login, inst))      # logout()
     queue.put(create(checkin, inst))
     queue.put(create(karapower, inst))
-    # queue.put(create(logout, inst))
+    queue.put(create(logout, inst))
 
 
 def open_kara(inst):
@@ -62,7 +62,6 @@ def login(inst):
 
 
 def checkin(inst):
-    print(inst.sml.name, inst.desc_widget.winfo_name())
     inst.desc('checkin ...')
     s = inst.sml
     s.click(pos('quest.button'))

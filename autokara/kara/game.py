@@ -26,8 +26,9 @@ class Karastar(object):
     def init_env(self):
         lines = execmd(SML_PATH + 'ldconsole list2')
         if not lines or lines[0].strip().endswith('-1,-1'):
-            message('Simulator not running')
-            sys.exit()
+            # message('Simulator not running')
+            # sys.exit()
+            raise RuntimeError('Simulator not running')
 
         for line in lines:
             info = line.strip().split(',')
@@ -37,8 +38,9 @@ class Karastar(object):
     def init_adb(self):
         lines = execmd(SML_PATH + 'adb devices')
         if not lines:
-            message('Adb.exe or device connection error')
-            sys.exit()
+            # message('Adb.exe or device connection error')
+            # sys.exit()
+            raise RuntimeError('Adb.exe or device connection error')
 
         for line in lines:
             if len(line) > 1 and 'attached' not in line:
@@ -46,9 +48,10 @@ class Karastar(object):
 
     def init_sml(self):
         if len(self.sml_list) != len(self.adb_devs):
-            message('init error')
+            # message('init error')
             execmd(SML_PATH + 'adb kill-server')
-            sys.exit()
+            # sys.exit()
+            raise RuntimeError('init unexpected error')
 
         for i in range(len(self.sml_list)):
             info = self.sml_list[i][:-3]
