@@ -1,13 +1,17 @@
 import subprocess
 import threading
+import time
 from subprocess import PIPE
 
 import cv2 as cv
 import numpy as np
+import win32con
+import win32gui
+import win32ui
 
-import script.utils
 from config import config
-from kara import action, utils, account
+from kara import action, utils
+from PIL import ImageGrab
 
 WAIT_TIMES = config.instance().getint('kara', 'simulator.wait.times')
 SIMULATOR_PATH = config.instance().get('kara', 'simulator.path')
@@ -28,14 +32,9 @@ class Simulator(object):
         self.f_stop = True
 
     def capture(self) -> np.ndarray:
-        prc = subprocess.Popen(self.adb + 'screencap -p', stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        out, err = prc.communicate()
-        if prc.returncode > 0:
-            raise RuntimeError('unknown error during fetching capture image')
-        prc.kill()
-        out = out.replace(b'\r\n', b'\n')
-        met = np.frombuffer(out, dtype=np.uint8)
-        return cv.imdecode(met, cv.IMREAD_COLOR)
+        # return utils.adbcap(self.adb)
+        return utils.wincap(self.hwnd)
+        # return utils.pilcap(self.hwnd)
 
     def click(self, p):
         action.click(self.hwnd, tuple(p))
@@ -48,6 +47,13 @@ class Simulator(object):
 
     def typing(self, txt: str):
         action.typing(self.hwnd, txt)
+
+    def tmatch(self, template: np.ndarray):
+        h, w, d = template.shape
+        res = cv.matchTemplate(self.capture(), template, cv.TM_CCOEFF)
+        miv, mav, mil, lt = cv.minMaxLoc(res)
+        rb = (lt[0] + w, lt[1] + h)
+        return np.array(lt), np.array(rb)
 
     def match(self, template: np.ndarray, gray=True, blur=True, th=utils.GOOD_THRESHOLD, wait=True):
         wt = WAIT_TIMES if wait else 1
@@ -71,6 +77,11 @@ class Simulator(object):
 
 
 if __name__ == '__main__':
-    # s = Simulator('雷电模拟器', 0, '127.0.0.1:5555')
-    # cv.imwrite('../resources/area/cap.png', s.capture())
+    s = Simulator(0, 'ld1', 393894, 132428, 'emulator-5554')
+    # cap = s.capture()
+    # roi = cap[81:137, 103:158]
+    # cv.imwrite('../resources/area/roi.png', roi)
+    # s.match_click(cv.imread('../resources/area/roi.png'))
+    # lt, rb = s.tmatch(cv.imread('../resources/area/roi.png'))
+    # print(utils.rect_center(lt, rb))
     pass

@@ -1,13 +1,17 @@
 import os
+import subprocess
 import time
 from ctypes import windll
+from PIL import ImageGrab
+from subprocess import PIPE
 
 import cv2 as cv
 import numpy as np
 import win32api
 import win32con
+import win32gui
+import win32ui
 
-import script.utils
 from config import config
 
 windll.user32.SetProcessDPIAware()
@@ -15,6 +19,54 @@ RED = (0, 0, 255)
 GOOD_THRESHOLD = 8
 SIFT = cv.SIFT_create()
 FLANN = cv.FlannBasedMatcher(dict(algorithm=1, trees=5), dict(checks=50))
+
+
+def adbcap(adb_cmd):
+    prc = subprocess.Popen(adb_cmd + 'screencap -p', stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = prc.communicate()
+    if prc.returncode > 0:
+        raise RuntimeError('unknown error during fetching capture image')
+    prc.kill()
+    out = out.replace(b'\r\n', b'\n')
+    met = np.frombuffer(out, dtype=np.uint8)
+    return cv.imdecode(met, cv.IMREAD_COLOR)
+
+
+def wincap(handle):
+    x, y, x2, y2 = win32gui.GetWindowRect(handle)
+    w, h = x2 - x, y2 - y
+
+    wdc = win32gui.GetWindowDC(handle)
+    hdc = win32ui.CreateDCFromHandle(wdc)
+    cdc = hdc.CreateCompatibleDC()
+
+    sbm = win32ui.CreateBitmap()
+    sbm.CreateCompatibleBitmap(hdc, w, h)
+    cdc.SelectObject(sbm)
+    cdc.BitBlt((0, 0), (w, h), hdc, (0, 0), win32con.SRCCOPY)
+    # bmpinfo = sbm.GetInfo()
+    bmpstr = sbm.GetBitmapBits(True)
+
+    # im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
+    # im.show()
+    img = np.frombuffer(bmpstr, dtype=np.uint8).reshape((h, w, 4))
+    cv.cvtColor(img, cv.COLOR_RGBA2BGR)
+    # cv.imshow('img', img)
+    # cv.waitKey(0)
+
+    win32gui.DeleteObject(sbm.GetHandle())
+    cdc.DeleteDC()
+    hdc.DeleteDC()
+    win32gui.ReleaseDC(handle, wdc)
+
+    return img[:, :, :3]
+
+
+def pilcap(handle):
+    x, y, w, h = win32gui.GetWindowRect(handle)
+    cap = ImageGrab.grab((x, y, w, h))
+    img = cv.cvtColor(np.array(cap), cv.COLOR_RGB2BGR)
+    return img
 
 
 def tmatch(screen, template):
