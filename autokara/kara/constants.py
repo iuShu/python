@@ -7,7 +7,8 @@ EMADDR = cv.imread("../resources/emaddr.png")
 READY = cv.imread('../resources/ready.png')
 MAIN = cv.imread('../resources/main_flag.png')
 CHECKIN = cv.imread('../resources/checkin.png')
-ATV_POWER = cv.imread('../resources/atv_power.png')
+# ATV_POWER = cv.imread('../resources/atv_power.png')
+CANCEL = cv.imread('../resources/cancel.png')
 
 
 ARENA_GENERAL = {
@@ -21,3 +22,14 @@ ARENA_ADVANCED = {
     10: 'arena.advanced.legend',
     9999: 'arena.advanced.extreme',
 }
+
+
+def get_scene(ev: int, lv: int):
+    if ev > 0:
+        for i in ARENA_ADVANCED:
+            if ev <= i:
+                return ARENA_ADVANCED[i]
+    else:
+        for i in ARENA_GENERAL:
+            if lv <= i:
+                return ARENA_GENERAL[i]

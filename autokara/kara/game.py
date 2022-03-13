@@ -1,9 +1,11 @@
 import sys
+import threading
 
 import win32api
 import win32con
 import win32gui
 
+import kara.synchronizer
 from config import config
 from kara.instance import KaraInstance
 from kara.simulator import Simulator
@@ -53,11 +55,12 @@ class Karastar(object):
             # sys.exit()
             raise RuntimeError('init unexpected error')
 
+        sync = kara.synchronizer.Synchronizer(len(self.sml_list))
         for i in range(len(self.sml_list)):
             info = self.sml_list[i][:-3]
             dev = self.adb_devs[i]
             sml = Simulator(*info, dev)
-            ki = KaraInstance(sml)
+            ki = KaraInstance(sml, sync)
             self.instances.append(ki)
 
     def init_layout(self):

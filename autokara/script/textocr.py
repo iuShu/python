@@ -31,10 +31,14 @@ def roi_rect(img):
     return area
 
 
-def text_recognize(img):
+def text_recognize(img) -> str:
     area = roi_rect(img)
-    area = cv.resize(area, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
-    cv.imwrite('../resources/temp/ocr.png', area)
+    return do_recognize(area)
+
+
+def do_recognize(img) -> str:
+    img = cv.resize(img, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
+    cv.imwrite('../resources/temp/ocr.png', img)
     root = utils.project_root()
     cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr.png stdout'
     prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)

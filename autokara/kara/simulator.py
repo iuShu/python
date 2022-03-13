@@ -33,7 +33,7 @@ class Simulator(object):
 
     def capture(self) -> np.ndarray:
         # return utils.adbcap(self.adb)
-        return utils.wincap(self.hwnd)
+        return utils.wincap(self.hwnd)[:, :, :3]
         # return utils.pilcap(self.hwnd)
 
     def click(self, p):
@@ -84,4 +84,7 @@ if __name__ == '__main__':
     # s.match_click(cv.imread('../resources/area/roi.png'))
     # lt, rb = s.tmatch(cv.imread('../resources/area/roi.png'))
     # print(utils.rect_center(lt, rb))
+    # img = s.capture()
+    # roi = img[234:275, 93:190]
+    # cv.imwrite('../resources/area/roi.png', roi)
     pass

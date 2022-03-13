@@ -59,7 +59,7 @@ def wincap(handle):
     hdc.DeleteDC()
     win32gui.ReleaseDC(handle, wdc)
 
-    return img[:, :, :3]
+    return img
 
 
 def pilcap(handle):
@@ -74,7 +74,7 @@ def tmatch(screen, template):
     res = cv.matchTemplate(screen, template, cv.TM_CCOEFF)
     miv, mav, mil, mal = cv.minMaxLoc(res)
     lt, rb = mal, (mal[0] + w, mal[1] + h)
-    cv.rectangle(screen, lt, rb, 255, 2)
+    # cv.rectangle(screen, lt, rb, 255, 2)
     # cv.imshow('img', screen)
     # cv.waitKey(0)
     return lt, rb

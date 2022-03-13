@@ -5,17 +5,19 @@ from kara import account
 from kara.karaexception import KaraException
 from kara.simulator import Simulator
 from kara.task.tasklist import tasklist
+from kara.synchronizer import Synchronizer
 from kara.utils import cooldown, message
 
 
 class KaraInstance(threading.Thread):
 
-    def __init__(self, sml: Simulator):
+    def __init__(self, sml: Simulator, sync: Synchronizer):
         threading.Thread.__init__(self, name='inst-' + sml.name)
         self.sml = sml
         self.acm = account.instance()
         self.tasks = queue.Queue()
         self.task = None
+        self.sync = sync
         self.power = 0
         self.acc = None
         self.f_pause = False
@@ -35,9 +37,11 @@ class KaraInstance(threading.Thread):
                         self.task.exec()
                 else:
                     cooldown('instance.pause')
-        except KaraException as ke:
+        except KaraException or RuntimeError as ke:
+            self.desc(ke.__str__())
             message(f'{th_name} exited with error: {ke.msg}')
         except Exception as e:
+            self.desc(e.__str__())
             message(f'{th_name} exited with error: {e.__str__()}')
         self.finish()
 

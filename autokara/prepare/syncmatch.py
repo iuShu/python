@@ -1,12 +1,11 @@
-import random
 import threading
 import time
 
 import cv2 as cv
-import numpy
 import numpy as np
 
-from kara.utils import rect_center, match
+import kara.utils
+import script.textocr
 from kara.simulator import Simulator
 
 
@@ -68,5 +67,19 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    # test()
+    # ev1 = img[lt[1]:rb[1], lt[0]:rb[0]]
+
+    # 576, 962
+    img = cv.imread('../resources/arena/match.png')
+    lt, rb = kara.utils.pos('arena.match.cancel.lt'), kara.utils.pos('arena.match.cancel.rb')
+    print(lt, rb)
+    # img = img[lt[1]:rb[1], lt[0]:rb[0]]
+    # img = img[:, :1530, :]
+    # img = cv.resize(img, (962, 576))
+    tpl = cv.imread('../resources/cancel.png')
+    print(kara.utils.tmatch(img, tpl))
+    # cv.imshow('img', img)
+    # cv.waitKey(0)
+    # cv.imwrite('../resources/cancel.png', img)
 

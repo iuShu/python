@@ -110,7 +110,7 @@ TL_Y = 'Top Left Y'
 BR_X = 'Bottom Right X'
 BR_Y = 'Bottom Right Y'
 SAVE = 'Save'
-IMAGE = '../resources/team/team-panel.png'
+IMAGE = '../resources/arena/match.png'
 
 
 def draw_rect(arg):

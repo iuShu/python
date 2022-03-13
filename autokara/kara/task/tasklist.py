@@ -1,9 +1,8 @@
-import random
-
 from kara.task.taskunit import create
 from kara.karaexception import KaraException
 from kara.utils import cooldown, pos
 from kara.constants import *
+from config import config
 from script import textocr
 
 import time
@@ -16,7 +15,8 @@ def tasklist(inst):
     queue.put(create(login, inst))      # logout()
     queue.put(create(checkin, inst))
     queue.put(create(karapower, inst))
-    queue.put(create(logout, inst))
+    # queue.put(create(arena, inst))
+    # queue.put(create(logout, inst))
 
 
 def open_kara(inst):
@@ -66,6 +66,7 @@ def checkin(inst):
     s = inst.sml
     s.click(pos('quest.button'))
     cooldown('panel.open')
+    s.match(CHECKIN)
     s.click(pos('quest.checkin'))
     cooldown('minor')
     s.click(pos('quest.close'))
@@ -78,19 +79,76 @@ def karapower(inst):
     lt, rb = pos('power.left.top'), pos('power.right.bottom')
     roi = s.capture()[lt[1]:rb[1], lt[0]:rb[0]]
     txt = textocr.text_recognize(roi)
-    print('reg', txt)
-    if not txt or '/' not in txt:
-        return
-
-    available = int(txt.split('/')[0])
-    if available > 0:
-        inst.power = available
+    inst.desc('power = txt')
+    if txt and '/' in txt:
+        available = int(txt.split('/')[0])
+        if available > 0:
+            inst.power = available
+            inst.tasks.put(create(arena, inst))
+    inst.tasks.put(create(logout, inst))
 
 
 def arena(inst):
-    # if not inst.check_power():
-    #     raise KaraException('not enough kara power')
+    s = inst.sml
+    inst.desc('enter arena')
+    s.click(pos('arena.button'))
+    cooldown('panel.open')
 
+    inst.desc('recognizing ev lv')
+    img, ei, li = s.capture(), [], []
+    lt, rb = np.array(pos('arena.kara.lt')), np.array(pos('arena.kara.rb'))
+    xadd, yadd = pos('arena.kara.inc')
+    for _ in range(3):
+        ei.append(img[lt[1]:rb[1], lt[0]:rb[0]])
+        lt, rb = lt + (0, yadd), rb + (0, yadd)
+        li.append(img[lt[1]:rb[1], lt[0]:rb[0]])
+        lt, rb = lt + (xadd, -yadd), rb + (xadd, -yadd)
+
+    mxe, mxl = 0, 0
+    for e in ei:
+        txt = textocr.do_recognize(e)
+        if not txt:
+            inst.desc('recognizing ev error')
+            return
+        num = int(txt.split(':')[1].strip())
+        if mxe == 0 or mxe < num:
+            mxe = num
+
+    for i in li:
+        txt = textocr.do_recognize(i)
+        if not txt:
+            inst.desc('recognizing lv error')
+            return
+        num = int(txt.split(':')[1].strip())
+        if mxl == 0 or mxl < num:
+            mxl = num
+
+    inst.desc(f'ev {mxe} and lv {mxl}')
+    max_ev, max_lv = inst.sync.join(inst.sml.idx, mxe, mxl)
+    max_scene, scene = get_scene(max_ev, max_lv), get_scene(mxe, mxl)
+    if max_scene != scene:
+        inst.desc(f'mismatch: {mxe}/{mxl} {max_ev}/{max_lv}')
+        return
+
+    # prepare
+    scene_pos, cancel_pos = pos(max_scene), pos('arena.match.cancel.button')
+    clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
+    wait_times = config.instance().get('kara', 'arena.match.wait.time')
+
+    inst.sync.barrier.wait()
+
+    # matching
+    s.click(scene_pos)
+    cooldown('arena.startup')
+
+    while wait_times > 0:
+        lt, rb = s.tmatch(CANCEL)
+        if np.all(lt != clt) or np.all(rb != crb):
+            # TODO matched
+            pass
+
+    while inst.check_power():
+        pass
     pass
 
 
@@ -105,4 +163,4 @@ def logout(inst):
     queue.put(create(login, inst))
     queue.put(create(checkin, inst))
     queue.put(create(karapower, inst))
-    queue.put(create(logout, inst))
+    # queue.put(create(logout, inst))
