@@ -85,10 +85,11 @@ def karapower(inst):
         if available > 0:
             inst.power = available
             inst.tasks.put(create(arena, inst))
+            return
     inst.tasks.put(create(logout, inst))
 
 
-def arena(inst):
+def arena_prepare(inst):
     s = inst.sml
     inst.desc('enter arena')
     s.click(pos('arena.button'))
@@ -126,14 +127,21 @@ def arena(inst):
     inst.desc(f'ev {mxe} and lv {mxl}')
     max_ev, max_lv = inst.sync.join(inst.sml.idx, mxe, mxl)
     max_scene, scene = get_scene(max_ev, max_lv), get_scene(mxe, mxl)
-    if max_scene != scene:
+    if max_scene == scene:
+        inst.arena_scene = max_scene
+        inst.tasks.put(create(arena, inst))
+    else:
         inst.desc(f'mismatch: {mxe}/{mxl} {max_ev}/{max_lv}')
-        return
+        inst.tasks.put(create(logout, inst))
 
+
+def arena(inst):
     # prepare
-    scene_pos, cancel_pos = pos(max_scene), pos('arena.match.cancel.button')
+    s = inst.sml
+    scene_pos, cancel_pos = pos(inst.arena_scene), pos('arena.match.cancel.button')
     clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
     wait_times = config.instance().get('kara', 'arena.match.wait.time')
+    inst.desc('pvp match ready')
 
     inst.sync.barrier.wait()
 

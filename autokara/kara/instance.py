@@ -20,6 +20,7 @@ class KaraInstance(threading.Thread):
         self.sync = sync
         self.power = 0
         self.acc = None
+        self.arena_scene = ''
         self.f_pause = False
         self.f_end = False
         self.ui_rid = None

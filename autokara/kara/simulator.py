@@ -77,7 +77,7 @@ class Simulator(object):
 
 
 if __name__ == '__main__':
-    s = Simulator(0, 'ld1', 393894, 132428, 'emulator-5554')
+    s = Simulator(0, '雷电模拟器', 15270726, 5309338, '127.0.0.1:5554')
     # cap = s.capture()
     # roi = cap[81:137, 103:158]
     # cv.imwrite('../resources/area/roi.png', roi)
@@ -87,4 +87,7 @@ if __name__ == '__main__':
     # img = s.capture()
     # roi = img[234:275, 93:190]
     # cv.imwrite('../resources/area/roi.png', roi)
+    cap = s.capture()
+    cv.imshow('img', cap)
+    cv.waitKey(0)
     pass
