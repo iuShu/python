@@ -21,7 +21,7 @@ class Karastar(object):
         self.adb_devs = []
         self.instances = []
         self.init_env()
-        self.init_adb()
+        # self.init_adb()
         self.init_sml()
         self.init_layout()
 
@@ -49,17 +49,18 @@ class Karastar(object):
                 self.adb_devs.append(line.split('device')[0].replace('\t', ''))
 
     def init_sml(self):
-        if len(self.sml_list) != len(self.adb_devs):
-            # message('init error')
-            execmd(SML_PATH + 'adb kill-server')
-            # sys.exit()
+        # if len(self.sml_list) != len(self.adb_devs):
+        #     message('init error')
+        #     execmd(SML_PATH + 'adb kill-server')
+        #     sys.exit()
+        if not self.sml_list:
             raise RuntimeError('init unexpected error')
 
         sync = kara.synchronizer.Synchronizer(len(self.sml_list))
         for i in range(len(self.sml_list)):
             info = self.sml_list[i][:-3]
-            dev = self.adb_devs[i]
-            sml = Simulator(*info, dev)
+            # dev = self.adb_devs[i]
+            sml = Simulator(*info, '')
             ki = KaraInstance(sml, sync)
             self.instances.append(ki)
 

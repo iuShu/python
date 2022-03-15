@@ -56,7 +56,7 @@ def login(inst):
     s.click(pos('login.button'))
     lt, rb = s.match(MAIN)
     if np.any(lt is None):
-        raise KaraException('login failure with account ' + acc[0])
+        raise KaraException('login failure')
 
     inst.desc('login ok')
 
@@ -79,7 +79,8 @@ def karapower(inst):
     lt, rb = pos('power.left.top'), pos('power.right.bottom')
     roi = s.capture()[lt[1]:rb[1], lt[0]:rb[0]]
     txt = textocr.text_recognize(roi)
-    inst.desc('power = txt')
+    inst.desc(f'power = {txt}')
+    cooldown('panel.quit')
     if txt and '/' in txt:
         available = int(txt.split('/')[0])
         if available > 0:
@@ -186,8 +187,10 @@ def battle(inst):
     cooldown('panel.quit')
     inst.power -= 1
     if inst.check_power():
+        inst.desc('next pvp match')
         inst.tasks.put(create(arena_prepare, inst))
     else:
+        inst.desc('no power, logout')
         inst.tasks.put(create(logout, inst))
 
 
@@ -197,6 +200,7 @@ def logout(inst):
     s.click(pos('setting.button'))
     cooldown('panel.open')
     s.click(pos('logout.button'))
+    cooldown('panel.quit')
 
     queue = inst.tasks
     queue.put(create(login, inst))

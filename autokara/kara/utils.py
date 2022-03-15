@@ -131,6 +131,11 @@ def grab_cut(img, rect) -> np.ndarray:
     return img * mask2[:, :, np.newaxis]
 
 
+def show(img: np.ndarray, title='Screen Image'):
+    cv.imshow(title, img)
+    cv.waitKey(0)
+
+
 def cooldown(cfk: str):
     time.sleep(config.instance().getint('kara', cfk + '.cooldown') / 1000)
 

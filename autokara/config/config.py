@@ -33,6 +33,33 @@ class ConfigContext(object):
         val = self.get(name, key)
         return int(val) if val else 0
 
+    def getall(self, name: str) -> dict:
+        conf = self.repo.get(name)
+        return conf.props if conf else None
+
+    def names(self):
+        return self.repo.keys()
+
+    def update(self, name: str, key: str, val, delete=False) -> bool:
+        conf = self.repo.get(name)
+        if not conf:
+            return False
+
+        try:
+            val = str(val)
+            props = conf.props
+            if not delete:
+                props[key] = val
+            else:
+                props.pop(key)
+            with open(conf.path, 'w') as f:
+                for k in props:
+                    val = props[k] if not isinstance(props[k], list) else ','.join(props[k])
+                    f.writelines(f'{k}={val}\n')
+            return True
+        except Exception:
+            return False
+
 
 class Configuration(object):
 

@@ -1,6 +1,9 @@
 import tkinter as tk
+from tkinter.messagebox import askyesno
 from tkinter import ttk, Tk, PhotoImage
 
+from config import config
+import kara.utils
 from kara.game import Karastar
 from kara.utils import message
 
@@ -28,8 +31,13 @@ class KaraUi(object):
 
         menu = tk.Menu(root)
         m_option = tk.Menu(menu, tearoff=0)
+        m_config = tk.Menu(m_option, tearoff=0)
         m_help = tk.Menu(menu, tearoff=0)
         m_option.add_command(label='init', command=self.m_init)
+        m_option.add_command(label='capture', command=self.m_capture)
+        m_option.add_cascade(label='config', menu=m_config)
+        m_config.add_command(label='kara', command=lambda: self.m_config('kara'))
+        m_config.add_command(label='account', command=lambda: self.m_config('account'))
         m_option.add_separator()
         m_option.add_command(label='exit', command=self.win_exit)
         m_help.add_command(label='usage', command=self.usage)
@@ -50,6 +58,7 @@ class KaraUi(object):
         label_acc = ttk.Label(root, text='next acc | none')
         label_acc.place(x=padx, y=58)
         btn_list = ttk.Button(root, text='show all')
+        btn_list.bind('<Button-1>', self.show_all_account)
         btn_list.place(x=326, y=55)
 
         tree = ttk.Treeview(root, show='headings')
@@ -91,6 +100,52 @@ class KaraUi(object):
             inst.bind_ui(rid, self.root)
         self.root.children['!button']['state'] = tk.NORMAL
 
+    def m_capture(self):
+        if not self.karastar:
+            self.m_init()
+
+        inst = self.karastar.instances[0]
+        cap = inst.sml.capture()
+        kara.utils.show(cap)
+
+    def m_config(self, file: str):
+        child_wnd = tk.Toplevel(self.root)
+        child_wnd.title('kara.properties')
+        x, y = self.root.winfo_x(), self.root.winfo_y()
+        child_wnd.geometry(f'412x436+{x + 50}+{y + 30}')
+        child_wnd.resizable(width=False, height=False)
+
+        tips = ttk.Label(child_wnd, text='Double click to modify')
+        tips.place(x=10, y=10)
+
+        tree = ttk.Treeview(child_wnd, show='headings', height=15)
+        tree["columns"] = ("key", "value")
+        tree.column("key", width=170, anchor=tk.W)
+        tree.column("value", width=220, anchor=tk.CENTER)
+        tree.heading("key", text='key')
+        tree.heading("value", text="value")
+        tree.bind('<Double-1>', lambda e: self.config_modify(e, tree, key_input, val_input))
+        tree.place(x=10, y=35)
+
+        props = config.instance().getall(file)
+        for k in props:
+            v = props[k] if not isinstance(props[k], list) else ','.join(props[k])
+            tree.insert('', tk.END, values=[k, v])
+
+        key_input = ttk.Entry(child_wnd, width=24, textvariable=tk.StringVar(child_wnd, value='abc'))
+        val_input = ttk.Entry(child_wnd, width=29)
+        btn_save = ttk.Button(child_wnd, text='save')
+        btn_delete = ttk.Button(child_wnd, text='delete')
+        btn_cancel = ttk.Button(child_wnd, text='cancel')
+        btn_save.bind('<Button-1>', lambda e: self.config_control(2, child_wnd, file, key_input, val_input))
+        btn_delete.bind('<Button-1>', lambda e: self.config_control(1, child_wnd, file, key_input, val_input))
+        btn_cancel.bind('<Button-1>', lambda e: self.config_control(0, child_wnd, file, key_input, val_input))
+        key_input.place(x=10, y=370)
+        val_input.place(x=193, y=370)
+        btn_save.place(x=124, y=400)
+        btn_delete.place(x=220, y=400)
+        btn_cancel.place(x=316, y=400)
+
     @staticmethod
     def create_karastar() -> Karastar:
         try:
@@ -102,21 +157,39 @@ class KaraUi(object):
         child_wnd = tk.Toplevel(self.root)
         child_wnd.title('Usage of Karastar Assistant')
         x, y = self.root.winfo_x(), self.root.winfo_y()
-        child_wnd.geometry(f'390x300+{x + 50}+{y + 50}')
+        child_wnd.geometry(f'410x320+{x + 50}+{y + 30}')
+        child_wnd.resizable(width=False, height=False)
 
-        ttk.Label(child_wnd, text='首次使用').place(x=10, y=10)
+        ttk.Label(child_wnd, text='首次配置').place(x=10, y=10)
         ttk.Label(child_wnd, text='1. 设置模拟器分辨率为 960 x 540').place(x=20, y=35)
         ttk.Label(child_wnd, text='2. 收起模拟器右侧工具栏').place(x=20, y=60)
-        ttk.Label(child_wnd, text='3. 安装 Karastar 并打开设置好应用权限').place(x=20, y=85)
+        ttk.Label(child_wnd, text='3. 安装 Karastar 打开允许相关设备权限').place(x=20, y=85)
         ttk.Label(child_wnd, text='4. 使用多开工具复制此模拟器').place(x=20, y=110)
-        ttk.Label(child_wnd, text='5. 修改 kara.properties 文件中模拟器安装路径 simulator.path').place(x=20, y=135)
-        ttk.Label(child_wnd, text='6. 修改 kara.properties 文件中识别工具安装路径 tesseract.path').place(x=20, y=160)
-        ttk.Label(child_wnd, text='正式使用').place(x=10, y=185)
-        ttk.Label(child_wnd, text='1. Option -> init').place(x=20, y=210)
-        ttk.Label(child_wnd, text='2. Start').place(x=20, y=235)
+        ttk.Label(child_wnd, text='5. Option/config/kara 配置模拟器安装路径 simulator.path').place(x=20, y=135)
+        ttk.Label(child_wnd, text='6. Option/config/kara 配置识别工具安装路径 tesseract.path').place(x=20, y=160)
+        ttk.Label(child_wnd, text='7. Option/config/account 配置账号').place(x=20, y=185)
+        ttk.Label(child_wnd, text='正式使用').place(x=10, y=210)
+        ttk.Label(child_wnd, text='1. Option/init 初始化并排列模拟器').place(x=20, y=235)
+        ttk.Label(child_wnd, text='2. Option/capture 测试截图功能').place(x=20, y=260)
+        ttk.Label(child_wnd, text='3. Start 启动辅助').place(x=20, y=285)
 
     def about(self):
         print('about')
+
+    def show_all_account(self, event):
+        props = config.instance().getall('account')
+        child_wnd = tk.Toplevel(self.root)
+        child_wnd.title('Karastar Account List')
+        h, x, y = 30, self.root.winfo_x(), self.root.winfo_y()
+        h += (len(props.keys()) * 25 + 6)
+        child_wnd.geometry(f'390x{h}+{x + 50}+{y + 30}')
+        child_wnd.resizable(width=False, height=False)
+
+        x, y, yadd = 10, 10, 25
+        for i in range(len(props.keys())):
+            acc = props.get(f'kara.account.{i%5+1}').split('  ')
+            ttk.Label(child_wnd, text=f'{i+1}    {acc[0]}  {acc[1]}').place(x=x, y=y)
+            y += yadd
 
     def on_click(self, event: tk.Event):
         btn = event.widget
@@ -135,6 +208,38 @@ class KaraUi(object):
             btn['image'] = 'start'
             btn['text'] = 'start'
         btn['state'] = tk.NORMAL
+
+    def config_modify(self, event: tk.Event, table: ttk.Treeview, ki: ttk.Entry, vi: ttk.Entry):
+        rid = event.widget.selection()[0]
+        row = table.item(rid)
+        ki.delete(0, tk.END)
+        vi.delete(0, tk.END)
+        ki.insert(0, row['values'][0])
+        vi.insert(0, row['values'][1])
+
+    def config_control(self, tag: int, wnd: tk.Toplevel, file: str, ki: ttk.Entry, vi: ttk.Entry):
+        if tag == 0:
+            ki.delete(0, tk.END)
+            vi.delete(0, tk.END)
+            return
+
+        delete = tag == 1
+        key, val = ki.get(), vi.get()
+        if not key or (not delete and not val):
+            return
+
+        if file == 'account' and '  ' not in val:
+            val = val.replace(' ', '  ')
+
+        if delete and not askyesno('Confirm delete account', 'Are you sure to delete this account ?'):
+            return
+
+        if config.instance().update(file, key, val, delete):
+            wnd.destroy()
+            self.m_config(file)
+            message(key + ' updated successful')
+        else:
+            message(ki.get() + ' update fail, occurred unknown error')
 
 
 if __name__ == '__main__':
