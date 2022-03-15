@@ -40,7 +40,7 @@ class KaraInstance(threading.Thread):
                     cooldown('instance.pause')
         except KaraException or RuntimeError as ke:
             self.desc(ke.__str__())
-            message(f'{th_name} exited with error: {ke.msg}')
+            # message(f'{th_name} exited with error: {ke.msg}')
         except Exception as e:
             self.desc(e.__str__())
             message(f'{th_name} exited with error: {e.__str__()}')

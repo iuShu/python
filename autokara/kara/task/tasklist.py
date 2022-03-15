@@ -84,7 +84,7 @@ def karapower(inst):
         available = int(txt.split('/')[0])
         if available > 0:
             inst.power = available
-            inst.tasks.put(create(arena, inst))
+            inst.tasks.put(create(arena_prepare, inst))
             return
     inst.tasks.put(create(logout, inst))
 
@@ -128,10 +128,16 @@ def arena_prepare(inst):
     max_ev, max_lv = inst.sync.join(inst.sml.idx, mxe, mxl)
     max_scene, scene = get_scene(max_ev, max_lv), get_scene(mxe, mxl)
     if max_scene == scene:
-        inst.arena_scene = max_scene
-        inst.tasks.put(create(arena, inst))
+        if inst.sync.same_scene(inst.sml.idx, True):
+            inst.arena_scene = max_scene
+            inst.tasks.put(create(arena, inst))
+        else:
+            inst.tasks.put(create(arena_prepare, inst))
     else:
+        inst.sync.same_scene(inst.sml.idx, False)
         inst.desc(f'mismatch: {mxe}/{mxl} {max_ev}/{max_lv}')
+        s.click(pos('team.quit'))
+        cooldown('panel.quit')
         inst.tasks.put(create(logout, inst))
 
 
@@ -140,24 +146,49 @@ def arena(inst):
     s = inst.sml
     scene_pos, cancel_pos = pos(inst.arena_scene), pos('arena.match.cancel.button')
     clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
-    wait_times = config.instance().get('kara', 'arena.match.wait.time')
+    wait_times = config.instance().getint('kara', 'arena.match.wait.time')
+    match_collision_endurance = config.instance().getint('kara', 'arena.match.collision.endurance') / 1000
+    matched = inst.sync.match_collision
+    cd = config.instance().getint('kara', 'arena.startup.cooldown') / 1000
     inst.desc('pvp match ready')
 
-    inst.sync.barrier.wait()
+    inst.sync.ready_match()
 
     # matching
     s.click(scene_pos)
-    cooldown('arena.startup')
+    time.sleep(cd)
 
-    while wait_times > 0:
+    while matched(False) < match_collision_endurance and wait_times > 0:
         lt, rb = s.tmatch(CANCEL)
-        if np.all(lt != clt) or np.all(rb != crb):
-            # TODO matched
-            pass
+        if np.all(lt != clt) or np.all(rb != crb):  # matched
+            matched(True)
+            inst.desc('matched')
+            inst.sync.finished(inst.sml.idx)
+            inst.tasks.put(create(battle, inst))
+            return
+        wait_times -= 1
 
-    while inst.check_power():
-        pass
-    pass
+    # match failed
+    inst.sync.finished(inst.sml.idx)
+    s.click(cancel_pos)
+    cooldown('panel.quit')
+    s.click(pos('team.quit'))
+    inst.tasks.put(create(arena_prepare, inst))
+
+
+def battle(inst):
+    inst.desc('entered pvp battle')
+    s = inst.sml
+    s.match(ARENA_SQUIRREL)
+    s.click(pos('arena.battle.setting'))
+    cooldown('minor')
+    s.click(pos('arena.battle.surrender'))
+    cooldown('panel.quit')
+    inst.power -= 1
+    if inst.check_power():
+        inst.tasks.put(create(arena_prepare, inst))
+    else:
+        inst.tasks.put(create(logout, inst))
 
 
 def logout(inst):

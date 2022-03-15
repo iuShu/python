@@ -9,6 +9,7 @@ MAIN = cv.imread('../resources/main_flag.png')
 CHECKIN = cv.imread('../resources/checkin.png')
 # ATV_POWER = cv.imread('../resources/atv_power.png')
 CANCEL = cv.imread('../resources/cancel.png')
+ARENA_SQUIRREL = cv.imread('../resources/squirrel.png')
 
 
 ARENA_GENERAL = {

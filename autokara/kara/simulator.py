@@ -33,8 +33,8 @@ class Simulator(object):
 
     def capture(self) -> np.ndarray:
         # return utils.adbcap(self.adb)
-        return utils.wincap(self.hwnd)[:, :, :3]
-        # return utils.pilcap(self.hwnd)
+        # return utils.wincap(self.hwnd)[:, :, :3]
+        return utils.pilcap(self.hwnd)
 
     def click(self, p):
         action.click(self.hwnd, tuple(p))

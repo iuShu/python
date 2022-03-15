@@ -63,8 +63,8 @@ def wincap(handle):
 
 
 def pilcap(handle):
-    x, y, w, h = win32gui.GetWindowRect(handle)
-    cap = ImageGrab.grab((x, y, w, h))
+    x, y, x2, y2 = win32gui.GetWindowRect(handle)
+    cap = ImageGrab.grab((x, y, x2, y2))
     img = cv.cvtColor(np.array(cap), cv.COLOR_RGB2BGR)
     return img
 

@@ -1,3 +1,4 @@
+import random
 import threading
 import time
 
@@ -5,81 +6,110 @@ import cv2 as cv
 import numpy as np
 
 import kara.utils
-import script.textocr
+from config import config
+from kara.synchronizer import Synchronizer
 from kara.simulator import Simulator
 
 
-TPL = cv.imread('../resources/area/roi.png')
+class SyncTest(threading.Thread):
 
-
-class Synchronizer(object):
-
-    def __init__(self):
-        pass
-
-
-class Slave(threading.Thread):
-
-    def __init__(self, sml: Simulator, sid: int, barrier: threading.Barrier):
+    def __init__(self, sml: Simulator, syn: Synchronizer):
         threading.Thread.__init__(self)
         self.sml = sml
-        self.sid = sid
-        self.barrier = barrier
-        self.trigger = 0
+        self.syn = syn
 
     def run(self) -> None:
-        rlt, rrb = (103, 81), (158, 137)
-        # p = np.array((130, 109))
-        p2 = (390, 210)
+        matched = self.syn.match_collision
+        wait_times = config.instance().getint('kara', 'arena.match.wait.time')
+        match_collision_endurance = config.instance().getint('kara', 'arena.match.collision.endurance') / 1000
+        scene_pos, clt, crb, cancel_pos = (128, 108), (236, 116), (285, 167), (256, 136)
+        cancel_img = cv.imread('../resources/area/cancel.png')
+        cd = config.instance().getint('kara', 'arena.startup.cooldown') / 1000
+        # clt, crb = np.array(clt), np.array(crb)
 
-        while True:
-            lt, rb = self.sml.tmatch(TPL)
-            if np.all(lt == rlt) and np.all(rb == rrb):
-                self.barrier.wait()
-                break
-        print(1)
-        while True:
-            lt, rb = self.sml.tmatch(TPL)
-            if np.all(lt != rlt) or np.all(rb != rrb):
-                self.sml.click(p2)
-            time.sleep(.02)
+        self.syn.ready_match()
 
-        # time.sleep(.2)
-        # while True:
-        #     if self.match('cancel button'):
-        #         continue
+        self.sml.click(scene_pos)
+        time.sleep(cd)
 
-        pass
+        while matched(False) < match_collision_endurance and wait_times > 0:
+            lt, rb = self.sml.tmatch(cancel_img)
+            if np.all(lt != clt) or np.all(rb != crb):  # matched
+                matched(True)
+                self.syn.finished(self.sml.idx)
+                print(self.sml.name + ' matched at', wait_times)
+                time.sleep(random.randint(1, 3))
+                print(self.sml.name + ' surrendered')
+                return
+            wait_times -= 1
+
+        print(self.sml.name + ' missed at', wait_times)
+        self.sml.click(cancel_pos)
+        self.syn.finished(self.sml.idx)
 
 
 def test():
     batch = 4
-    barrier = threading.Barrier(batch)
-    sml = [Simulator(0, 'ld1', 393894, 132428, 'emulator-5554'), Simulator(1, 'ld2', 853248, 591158, '127.0.0.1:5557'),
-           Simulator(0, 'ld3', 459946, 2229310, '127.0.0.1:5559'), Simulator(0, 'ld4', 66960, 66976, '127.0.0.1:5561')]
-    slaves = []
+    sync = Synchronizer(batch)
+    sml = [Simulator(0, 'ld1', 10225640, 9700794, ''),
+           Simulator(1, 'ld2', 7995654, 7734554, ''),
+           Simulator(2, 'ld3', 9176544, 7539042, ''),
+           Simulator(3, 'ld4', 2820204, 9896436, '')]
+
+    time.sleep(3)
+
     for i in range(batch):
-        s = Slave(sml[i], i * 100, barrier)
-        slaves.append(s)
-        s.start()
-    for i in slaves:
-        i.join()
+        t = SyncTest(sml[i], sync)
+        t.start()
+
+    time.sleep(2)
+    click_matched(sml, batch-1)
+
+
+def click_matched(sml: list, batch=1):
+    matched_pos = (779, 288)
+    matched_barrier = threading.Barrier(batch)
+
+    def execute(s: Simulator, barrier: threading.Barrier):
+        barrier.wait()
+        s.click(matched_pos)
+
+    for i in range(batch):
+        t = threading.Thread(target=execute, args=[sml[i], matched_barrier])
+        t.start()
+
+
+def simple():
+    time.sleep(3)
+    sml = [Simulator(0, 'ld1', 10225640, 9700794, ''),
+           Simulator(1, 'ld2', 7995654, 7734554, ''),
+           Simulator(2, 'ld3', 9176544, 7539042, ''),
+           Simulator(3, 'ld4', 2820204, 9896436, '')]
+    tpl = cv.imread('../resources/area/cancel.png')
+    cl, cr = (236, 116), (285, 167)
+    for s in sml:
+        s.click((128, 108))
+
+    time.sleep(2)
+
+    for _ in range(10):
+        for s in sml:
+            l, r = s.tmatch(tpl)
+            if np.all(l != cl) or np.all(r != cr):
+                print(s.name, 'x')
+            # else:
+            #     print(s.name, 'matched')
+            #     s.click((779, 288))
+
+    for s in sml:
+        s.click((779, 288))
 
 
 if __name__ == '__main__':
-    # test()
-    # ev1 = img[lt[1]:rb[1], lt[0]:rb[0]]
-
     # 576, 962
-    img = cv.imread('../resources/arena/match.png')
-    lt, rb = kara.utils.pos('arena.match.cancel.lt'), kara.utils.pos('arena.match.cancel.rb')
-    print(lt, rb)
-    # img = img[lt[1]:rb[1], lt[0]:rb[0]]
-    # img = img[:, :1530, :]
-    # img = cv.resize(img, (962, 576))
-    tpl = cv.imread('../resources/cancel.png')
-    print(kara.utils.tmatch(img, tpl))
-    # cv.imshow('img', img)
-    # cv.waitKey(0)
-    # cv.imwrite('../resources/cancel.png', img)
+
+    test()
+    # simple()
+
+    pass
 
