@@ -24,6 +24,7 @@ class KaraUi(object):
         root.title('Kara Assistant')
         root.geometry('420x340+800+200')
         root.resizable(width=False, height=False)
+        root.iconphoto(True, PhotoImage(file='../resources/ui/kara.png'))
 
         icon_start = PhotoImage(file='../resources/ui/start.png', name='start')
         icon_end = PhotoImage(file='../resources/ui/end.png', name='end')
@@ -306,13 +307,15 @@ class KaraUi(object):
         cv.imwrite('../resources/temp/capture.png', cap)
         capture = PhotoImage(master=child_wnd, file='../resources/temp/capture.png', name='capture')
 
+        tips = ttk.Label(child_wnd, text='Click the following photo to collect the mouse position')
         pl = ttk.Label(child_wnd, text=' x, y | ')
         pos = ttk.Label(child_wnd, text=f'{pos[0]}, {pos[1]}')
         btn = ttk.Button(child_wnd, text='copy')
         btn.bind('<Button-1>', lambda e: self.copy_pos(e, pos))
-        pl.place(x=10, y=10)
-        pos.place(x=45, y=11)
-        btn.place(x=120, y=7)
+        tips.place(x=10, y=12)
+        pl.place(x=782, y=10)
+        pos.place(x=820, y=11)
+        btn.place(x=885, y=7)
 
         cap = ttk.Label(child_wnd, image=capture, compound=tk.CENTER)
         cap.bind('<Button-1>', lambda e: self.cursor_pos(e, pos))
