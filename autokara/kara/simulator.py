@@ -33,8 +33,8 @@ class Simulator(object):
 
     def capture(self) -> np.ndarray:
         # return utils.adbcap(self.adb)
-        # return utils.wincap(self.hwnd)[:, :, :3]
-        return utils.pilcap(self.hwnd)
+        return utils.wincap(self.hwnd)[:, :, :3]
+        # return utils.pilcap(self.hwnd)
 
     def click(self, p):
         action.click(self.hwnd, tuple(p))
@@ -59,8 +59,7 @@ class Simulator(object):
         wt = WAIT_TIMES if wait else 1
         thn = threading.currentThread().name
         while wt > 0 and not self.f_stop:
-            cap = self.capture()
-            lt, rb = utils.match(cap, template, gray, blur, th)
+            lt, rb = utils.match(self.capture(), template, gray, blur, th)
             if np.any(lt is not None):
                 print(thn, 'match at', wt)
                 return lt, rb

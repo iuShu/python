@@ -2,10 +2,11 @@ import tkinter as tk
 from tkinter.messagebox import askyesno
 from tkinter import ttk, Tk, PhotoImage
 
+import cv2 as cv
+
 from config import config
-import kara.utils
 from kara.game import Karastar
-from kara.utils import message
+from kara.utils import message, show, wincap
 
 
 class KaraUi(object):
@@ -16,6 +17,7 @@ class KaraUi(object):
         self.karastar = None
         self.init_panel()
         self.child = None
+        self.capture_wnd = None
 
     def init_panel(self):
         root = Tk()
@@ -84,6 +86,12 @@ class KaraUi(object):
             [i.end() for i in self.karastar.instances]
         self.root.destroy()
 
+        try:
+            if self.capture_wnd:
+                self.capture_wnd.destroy()
+        except Exception:
+            pass
+
     def m_init(self):
         for i in self.table.get_children():
             self.table.delete(i)
@@ -103,10 +111,11 @@ class KaraUi(object):
     def m_capture(self):
         if not self.karastar:
             self.m_init()
+        if not self.karastar:
+            return
 
         inst = self.karastar.instances[0]
-        cap = inst.sml.capture()
-        kara.utils.show(cap)
+        show(inst.sml.capture())
 
     def m_config(self, file: str):
         child_wnd = tk.Toplevel(self.root)
@@ -134,17 +143,17 @@ class KaraUi(object):
 
         key_input = ttk.Entry(child_wnd, width=24, textvariable=tk.StringVar(child_wnd, value='abc'))
         val_input = ttk.Entry(child_wnd, width=29)
-        btn_save = ttk.Button(child_wnd, text='save')
-        btn_delete = ttk.Button(child_wnd, text='delete')
-        btn_cancel = ttk.Button(child_wnd, text='cancel')
+        btn_save = ttk.Button(child_wnd, text='save', width=8)
+        btn_delete = ttk.Button(child_wnd, text='delete', width=8)
+        btn_cancel = ttk.Button(child_wnd, text='cancel', width=8)
         btn_save.bind('<Button-1>', lambda e: self.config_control(2, child_wnd, file, key_input, val_input))
         btn_delete.bind('<Button-1>', lambda e: self.config_control(1, child_wnd, file, key_input, val_input))
         btn_cancel.bind('<Button-1>', lambda e: self.config_control(0, child_wnd, file, key_input, val_input))
         key_input.place(x=10, y=370)
         val_input.place(x=193, y=370)
-        btn_save.place(x=124, y=400)
-        btn_delete.place(x=220, y=400)
-        btn_cancel.place(x=316, y=400)
+        btn_save.place(x=194, y=400)
+        btn_delete.place(x=265, y=400)
+        btn_cancel.place(x=336, y=400)
 
     @staticmethod
     def create_karastar() -> Karastar:
@@ -174,7 +183,7 @@ class KaraUi(object):
         ttk.Label(child_wnd, text='3. Start 启动辅助').place(x=20, y=285)
 
     def about(self):
-        print('about')
+        message('To be continued ...')
 
     def show_all_account(self, event):
         props = config.instance().getall('account')
@@ -212,10 +221,28 @@ class KaraUi(object):
     def config_modify(self, event: tk.Event, table: ttk.Treeview, ki: ttk.Entry, vi: ttk.Entry):
         rid = event.widget.selection()[0]
         row = table.item(rid)
+        key, val = row['values'][0], row['values'][1]
         ki.delete(0, tk.END)
         vi.delete(0, tk.END)
-        ki.insert(0, row['values'][0])
-        vi.insert(0, row['values'][1])
+        ki.insert(0, key)
+        vi.insert(0, val)
+
+        master, buttons = event.widget.master, []
+        for k in master.children.keys():
+            if 'button' in k:
+                buttons.append(k)
+
+        if 'pos' in key and ',' in val:
+            if len(buttons) == 3:
+                btn_click = ttk.Button(master, text='click', width=8)
+                btn_click.bind('<Button-1>', lambda e: self.click_test(vi))
+                btn_click.place(x=10, y=400)
+                btn_capture = ttk.Button(master, text='capture', width=8)
+                btn_capture.bind('<Button-1>', lambda e: self.capture_pos(e, vi))
+                btn_capture.place(x=80, y=400)
+        elif len(buttons) > 3:
+            master.children[buttons[-2]].destroy()
+            master.children[buttons[-1]].destroy()
 
     def config_control(self, tag: int, wnd: tk.Toplevel, file: str, ki: ttk.Entry, vi: ttk.Entry):
         if tag == 0:
@@ -240,6 +267,67 @@ class KaraUi(object):
             message(key + ' updated successful')
         else:
             message(ki.get() + ' update fail, occurred unknown error')
+
+    def click_test(self, vi: ttk.Entry):
+        val = vi.get()
+        if not val:
+            return
+
+        pos = tuple(map(int, val.split(',')))
+        if not self.karastar:
+            self.m_init()
+        if not self.karastar:
+            return
+
+        inst = self.karastar.instances[0]
+        inst.sml.click(pos)
+
+    def capture_pos(self, event: tk.Event, vi: ttk.Entry):
+        val = vi.get()
+        if not val:
+            return
+
+        pos = tuple(map(int, val.split(',')))
+        if not self.karastar:
+            self.m_init()
+        if not self.karastar:
+            return
+
+        master = event.widget.master
+        child_wnd = tk.Toplevel(master)
+        child_wnd.title('Screenshot')
+        x, y = self.root.winfo_x(), self.root.winfo_y()
+        child_wnd.geometry(f'984x600+{x - 300}+{y - 100}')
+        child_wnd.resizable(width=False, height=False)
+
+        inst = self.karastar.instances[0]
+        cap = cv.cvtColor(wincap(inst.sml.hwnd), cv.COLOR_BGRA2BGR)
+        cv.circle(cap, pos, 3, (0, 255, 255), thickness=-1)
+        cv.imwrite('../resources/temp/capture.png', cap)
+        capture = PhotoImage(master=child_wnd, file='../resources/temp/capture.png', name='capture')
+
+        pl = ttk.Label(child_wnd, text=' x, y | ')
+        pos = ttk.Label(child_wnd, text=f'{pos[0]}, {pos[1]}')
+        btn = ttk.Button(child_wnd, text='copy')
+        btn.bind('<Button-1>', lambda e: self.copy_pos(e, pos))
+        pl.place(x=10, y=10)
+        pos.place(x=45, y=11)
+        btn.place(x=120, y=7)
+
+        cap = ttk.Label(child_wnd, image=capture, compound=tk.CENTER)
+        cap.bind('<Button-1>', lambda e: self.cursor_pos(e, pos))
+        cap.place(x=10, y=44)
+
+        child_wnd.mainloop()
+
+    @staticmethod
+    def cursor_pos(event: tk.Event, label: ttk.Label):
+        label['text'] = f'{event.x}, {event.y}'
+
+    def copy_pos(self, event: tk.Event, label: ttk.Label):
+        pos = label['text'].replace(' ', '')
+        self.root.clipboard_append(string=pos)
+        message('copy position successful')
 
 
 if __name__ == '__main__':

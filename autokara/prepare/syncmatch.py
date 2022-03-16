@@ -22,7 +22,7 @@ class SyncTest(threading.Thread):
         matched = self.syn.match_collision
         wait_times = config.instance().getint('kara', 'arena.match.wait.time')
         match_collision_endurance = config.instance().getint('kara', 'arena.match.collision.endurance') / 1000
-        scene_pos, clt, crb, cancel_pos = (128, 108), (236, 116), (285, 167), (256, 136)
+        scene_pos, clt, crb, cancel_pos = (128, 122), (236, 132), (285, 182), (256, 152)
         cancel_img = cv.imread('../resources/area/cancel.png')
         cd = config.instance().getint('kara', 'arena.startup.cooldown') / 1000
         # clt, crb = np.array(clt), np.array(crb)
@@ -51,10 +51,10 @@ class SyncTest(threading.Thread):
 def test():
     batch = 4
     sync = Synchronizer(batch)
-    sml = [Simulator(0, 'ld1', 10225640, 9700794, ''),
-           Simulator(1, 'ld2', 7995654, 7734554, ''),
-           Simulator(2, 'ld3', 9176544, 7539042, ''),
-           Simulator(3, 'ld4', 2820204, 9896436, '')]
+    sml = [Simulator(0, 'ld1', 66698, 66714, ''),
+           Simulator(1, 'ld2', 66764, 66804, ''),
+           Simulator(2, 'ld3', 66844, 66860, ''),
+           Simulator(3, 'ld4', 132462, 66950, '')]
 
     time.sleep(3)
 
@@ -80,15 +80,15 @@ def click_matched(sml: list, batch=1):
 
 
 def simple():
-    time.sleep(3)
-    sml = [Simulator(0, 'ld1', 10225640, 9700794, ''),
-           Simulator(1, 'ld2', 7995654, 7734554, ''),
-           Simulator(2, 'ld3', 9176544, 7539042, ''),
-           Simulator(3, 'ld4', 2820204, 9896436, '')]
+    time.sleep(2)
+    sml = [Simulator(0, 'ld1', 66698, 66714, ''),
+           Simulator(1, 'ld2', 66764, 66804, ''),
+           Simulator(2, 'ld3', 66844, 66860, ''),
+           Simulator(3, 'ld4', 132462, 66950, '')]
     tpl = cv.imread('../resources/area/cancel.png')
-    cl, cr = (236, 116), (285, 167)
+    cl, cr = (236, 117), (285, 167)
     for s in sml:
-        s.click((128, 108))
+        s.click((128, 122))
 
     time.sleep(2)
 
@@ -108,8 +108,24 @@ def simple():
 if __name__ == '__main__':
     # 576, 962
 
-    test()
+    # test()
     # simple()
+
+    cap = cv.imread('../resources/arena/pvp.png')
+    s = Simulator(0, 'ld1', 66698, 66714, '')
+    # cap = s.capture()
+    img = kara.utils.wincap(s.handle)
+    print(img.shape)
+    cv.imshow('img', img)
+    cv.waitKey(0)
+    # cap = cap[0:68, 850:920]
+    cap = cap[:, :1530]
+    cap = cv.resize(cap, (962, 576))
+    cv.imshow('img', cap)
+    cv.waitKey(0)
+
+    # l, r = s.tmatch(cv.imread('../resources/area/cancel.png'))
+    # print(l, r)
 
     pass
 
