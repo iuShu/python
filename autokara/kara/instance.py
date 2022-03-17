@@ -20,6 +20,7 @@ class KaraInstance(threading.Thread):
         self.sync = sync
         self.power = 0
         self.acc = None
+        self.arena_offset = False
         self.arena_scene = ''
         self.f_pause = False
         self.f_end = False
@@ -67,6 +68,7 @@ class KaraInstance(threading.Thread):
 
     def end(self):
         self.sml.stop()
+        self.sync.stop()
         self.f_end = True
 
     def finish(self):

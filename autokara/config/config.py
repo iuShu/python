@@ -52,7 +52,7 @@ class ConfigContext(object):
                 props[key] = val
             else:
                 props.pop(key)
-            with open(conf.path, 'w') as f:
+            with open(conf.path, 'w', encoding='utf-8') as f:
                 for k in props:
                     val = props[k] if not isinstance(props[k], list) else ','.join(props[k])
                     f.writelines(f'{k}={val}\n')
@@ -69,7 +69,7 @@ class Configuration(object):
         self.load()
 
     def load(self):
-        with open(self.path) as f:
+        with open(self.path, 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 line = line.strip()
                 if line and not line.startswith('#'):

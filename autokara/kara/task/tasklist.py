@@ -85,6 +85,7 @@ def karapower(inst):
         available = int(txt.split('/')[0])
         if available > 0:
             inst.power = available
+            inst.arena_offset = True
             inst.tasks.put(create(arena_prepare, inst))
             return
     inst.tasks.put(create(logout, inst))
@@ -94,7 +95,13 @@ def arena_prepare(inst):
     s = inst.sml
     inst.desc('enter arena')
     s.click(pos('arena.button'))
-    cooldown('panel.open')
+    cooldown('arena.panel.open')
+    if inst.arena_offset:
+        s.click(pos('team.quit'))
+        cooldown('panel.quit')
+        s.click(pos('arena.button'))
+        cooldown('arena.panel.open')
+        inst.arena_offset = False
 
     inst.desc('recognizing ev lv')
     img, ei, li = s.capture(), [], []
@@ -108,7 +115,7 @@ def arena_prepare(inst):
 
     mxe, mxl = 0, 0
     for e in ei:
-        txt = textocr.do_recognize(e)
+        txt = textocr.do_recognize(cv.cvtColor(e, cv.COLOR_BGR2GRAY))
         if not txt:
             inst.desc('recognizing ev error')
             return
@@ -117,7 +124,7 @@ def arena_prepare(inst):
             mxe = num
 
     for i in li:
-        txt = textocr.do_recognize(i)
+        txt = textocr.do_recognize(cv.cvtColor(i, cv.COLOR_BGR2GRAY))
         if not txt:
             inst.desc('recognizing lv error')
             return
@@ -146,12 +153,20 @@ def arena(inst):
     # prepare
     s = inst.sml
     scene_pos, cancel_pos = pos(inst.arena_scene), pos('arena.match.cancel.button')
+    cd = config.instance().getint('kara', 'arena.startup.cooldown') / 1000
+    # if inst.arena_offset:
+    #     s.click(scene_pos)
+    #     time.sleep(cd)
+    #     s.click(cancel_pos)
+    #     s.click(cancel_pos)
+    #     time.sleep(cd)
+
     clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
     wait_times = config.instance().getint('kara', 'arena.match.wait.time')
     match_collision_endurance = config.instance().getint('kara', 'arena.match.collision.endurance') / 1000
     matched = inst.sync.match_collision
-    cd = config.instance().getint('kara', 'arena.startup.cooldown') / 1000
     inst.desc('pvp match ready')
+    # print('raw', clt, crb)
 
     inst.sync.ready_match()
 
@@ -163,27 +178,36 @@ def arena(inst):
         lt, rb = s.tmatch(CANCEL)
         if np.all(lt != clt) or np.all(rb != crb):  # matched
             matched(True)
+            # print('matched', lt, rb, ' times', wait_times)
             inst.desc('matched')
             inst.sync.finished(inst.sml.idx)
+            cooldown('arena.match.loading')
             inst.tasks.put(create(battle, inst))
             return
         wait_times -= 1
 
     # match failed
+    # print('wait_times', wait_times)
     inst.sync.finished(inst.sml.idx)
+    s.click(cancel_pos)
     s.click(cancel_pos)
     cooldown('panel.quit')
     s.click(pos('team.quit'))
+    cooldown('panel.quit')
     inst.tasks.put(create(arena_prepare, inst))
 
 
 def battle(inst):
-    inst.desc('entered pvp battle')
+    inst.desc('pvp loading')
     inst.power -= 1
     s = inst.sml
-    s.match(ARENA_SQUIRREL)
+    lt, rb = s.match(ARENA_SQUIRREL, blur=False)
+    if np.any(lt is None):
+        raise KaraException('error status at pvp battle')
+
+    inst.desc('entered pvp battle')
     s.click(pos('arena.battle.setting'))
-    cooldown('minor')
+    cooldown('panel.quit')
     inst.desc('surrender')
     s.click(pos('arena.battle.surrender'))
     cooldown('panel.quit')

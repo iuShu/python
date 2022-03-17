@@ -20,7 +20,7 @@ SIMULATOR_PATH = config.instance().get('kara', 'simulator.path')
 class Simulator(object):
 
     def __init__(self, idx, name, handle, hwnd, dev):
-        self.idx = idx
+        self.idx = int(idx)
         self.dev = dev
         self.name = name
         self.handle = int(handle)

@@ -1,5 +1,6 @@
 import threading
 import time
+from kara.karaexception import KaraException
 
 lock = threading.Lock()
 
@@ -22,20 +23,29 @@ class Synchronizer(object):
     def join(self, idx: int, ev: int, lv: int) -> tuple:
         self.ev_senator[idx] = ev
         self.lv_senator[idx] = lv
-        self.elv_barrier.wait()
+        try:
+            self.elv_barrier.wait()
+        except threading.BrokenBarrierError:
+            raise KaraException('abort error')
         mev, mlv = max(self.ev_senator), max(self.lv_senator)
         self.elv_barrier.reset()
         return mev, mlv
 
     def same_scene(self, idx: int, check: bool) -> bool:
         self.scene_check[idx] = check
-        self.scene_barrier.wait()
+        try:
+            self.scene_barrier.wait()
+        except threading.BrokenBarrierError:
+            raise KaraException('abort error')
         v = False in self.scene_check
         self.scene_barrier.reset()
         return not v
 
     def ready_match(self):
-        self.barrier.wait()
+        try:
+            self.barrier.wait()
+        except threading.BrokenBarrierError:
+            raise KaraException('abort error')
 
     def match_collision(self, matched: bool) -> float:
         if not matched:
@@ -61,6 +71,11 @@ class Synchronizer(object):
         self.barrier.reset()
         self.matched_timestamp = 0
         self.reset_senator = [False for _ in range(len(self.reset_senator))]
+
+    def stop(self):
+        self.elv_barrier.abort()
+        self.scene_barrier.abort()
+        self.barrier.abort()
 
 
 def test():
