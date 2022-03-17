@@ -179,13 +179,14 @@ def arena(inst):
 
 def battle(inst):
     inst.desc('entered pvp battle')
+    inst.power -= 1
     s = inst.sml
     s.match(ARENA_SQUIRREL)
     s.click(pos('arena.battle.setting'))
     cooldown('minor')
+    inst.desc('surrender')
     s.click(pos('arena.battle.surrender'))
     cooldown('panel.quit')
-    inst.power -= 1
     if inst.check_power():
         inst.desc('next pvp match')
         inst.tasks.put(create(arena_prepare, inst))

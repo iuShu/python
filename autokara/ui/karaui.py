@@ -4,6 +4,7 @@ from tkinter import ttk, Tk, PhotoImage
 
 import cv2 as cv
 
+import script.textocr
 from config import config
 from kara.game import Karastar
 from kara.utils import message, show, wincap
@@ -197,7 +198,7 @@ class KaraUi(object):
 
         x, y, yadd = 10, 10, 25
         for i in range(len(props.keys())):
-            acc = props.get(f'kara.account.{i%5+1}').split('  ')
+            acc = props.get(f'kara.account.{i+1}').split('  ')
             ttk.Label(child_wnd, text=f'{i+1}    {acc[0]}  {acc[1]}').place(x=x, y=y)
             y += yadd
 
@@ -233,17 +234,30 @@ class KaraUi(object):
             if 'button' in k:
                 buttons.append(k)
 
+        prev_mode, mode = 'normal', 'normal'
+        if len(buttons) == 4:
+            prev_mode = 'tesseract'
+        elif len(buttons) == 5:
+            prev_mode = 'position'
         if 'pos' in key and ',' in val:
-            if len(buttons) == 3:
-                btn_click = ttk.Button(master, text='click', width=8)
-                btn_click.bind('<Button-1>', lambda e: self.click_test(vi))
-                btn_click.place(x=10, y=400)
-                btn_capture = ttk.Button(master, text='capture', width=8)
-                btn_capture.bind('<Button-1>', lambda e: self.capture_pos(e, vi))
-                btn_capture.place(x=80, y=400)
-        elif len(buttons) > 3:
-            master.children[buttons[-2]].destroy()
-            master.children[buttons[-1]].destroy()
+            mode = 'position'
+        elif 'tesseract' in key:
+            mode = 'tesseract'
+
+        if prev_mode != mode:
+            [master.children[buttons[i]].destroy() for i in range(3, len(buttons))]
+
+        if mode == 'position':
+            btn_click = ttk.Button(master, text='click', width=8)
+            btn_click.bind('<Button-1>', lambda e: self.click_test(vi))
+            btn_click.place(x=10, y=400)
+            btn_capture = ttk.Button(master, text='capture', width=8)
+            btn_capture.bind('<Button-1>', lambda e: self.capture_pos(e, vi))
+            btn_capture.place(x=80, y=400)
+        elif mode == 'tesseract':
+            btn_click = ttk.Button(master, text='test', width=8)
+            btn_click.bind('<Button-1>', self.tesseract_test)
+            btn_click.place(x=10, y=400)
 
     def config_control(self, tag: int, wnd: tk.Toplevel, file: str, ki: ttk.Entry, vi: ttk.Entry):
         if tag == 0:
@@ -282,6 +296,15 @@ class KaraUi(object):
 
         inst = self.karastar.instances[0]
         inst.sml.click(pos)
+
+    @staticmethod
+    def tesseract_test(event: tk.Event):
+        try:
+            res = script.textocr.do_recognize(cv.imread('../resources/temp/ocr_test.png'))
+            if res == '05:59:55':
+                message('tesseract ok')
+        except Exception:
+            message('error occurred during tesseract testing')
 
     def capture_pos(self, event: tk.Event, vi: ttk.Entry):
         val = vi.get()

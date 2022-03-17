@@ -111,16 +111,11 @@ if __name__ == '__main__':
     # test()
     # simple()
 
-    cap = cv.imread('../resources/arena/pvp.png')
-    s = Simulator(0, 'ld1', 66698, 66714, '')
-    # cap = s.capture()
-    img = kara.utils.wincap(s.handle)
-    print(img.shape)
-    cv.imshow('img', img)
-    cv.waitKey(0)
-    # cap = cap[0:68, 850:920]
-    cap = cap[:, :1530]
-    cap = cv.resize(cap, (962, 576))
+    # cap = cv.imread('../resources/arena/pvp.png')
+    # s = Simulator(0, 'ld1', 132212, 328626, '')
+    # cap = kara.utils.wincap(s.handle)
+    cap = cv.imread('../resources/arena/cap.png')
+    cap = cap[36:576, 1:961, :]
     cv.imshow('img', cap)
     cv.waitKey(0)
 
