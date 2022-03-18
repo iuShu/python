@@ -8,6 +8,7 @@ READY = cv.imread('../resources/ready.png')
 MAIN = cv.imread('../resources/main_flag.png')
 CHECKIN = cv.imread('../resources/checkin.png')
 # ATV_POWER = cv.imread('../resources/atv_power.png')
+MATCH_START = cv.imread('../resources/match_start.png')
 CANCEL = cv.imread('../resources/cancel.png')
 ARENA_SQUIRREL = cv.imread('../resources/squirrel.png')
 

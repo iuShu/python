@@ -50,7 +50,7 @@ def wincap(handle):
     # im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
     # im.show()
     img = np.frombuffer(bmpstr, dtype=np.uint8).reshape((h, w, 4))
-    cv.cvtColor(img, cv.COLOR_RGBA2BGR)
+    img = cv.cvtColor(img, cv.COLOR_BGRA2BGR)
     # cv.imshow('img', img)
     # cv.waitKey(0)
 

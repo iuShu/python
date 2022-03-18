@@ -62,6 +62,22 @@ class Synchronizer(object):
         finally:
             lock.release()
 
+    def simple_collision(self, matched: bool) -> float:
+        if not matched:
+            if self.matched_timestamp != 0:
+                return time.time() - self.matched_timestamp
+        elif self.matched_timestamp == 0:
+            self.matched_timestamp = time.time()
+        return 0.0
+
+    def wait_times_diff(self, wait_times: int, matched: bool) -> int:
+        if not matched:
+            if self.matched_timestamp != 0:
+                return self.matched_timestamp - wait_times
+        elif self.matched_timestamp == 0:
+            self.matched_timestamp = wait_times
+        return 0
+
     def finished(self, idx: int):
         self.reset_senator[idx] = True
         if False in self.reset_senator:

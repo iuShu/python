@@ -162,9 +162,11 @@ def arena(inst):
     #     time.sleep(cd)
 
     clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
+    slt = pos('arena.match.start.lt')
     wait_times = config.instance().getint('kara', 'arena.match.wait.time')
     match_collision_endurance = config.instance().getint('kara', 'arena.match.collision.endurance') / 1000
-    matched = inst.sync.match_collision
+    wait_times_endurance = config.instance().getint('kara', 'arena.match.wait.endurance')
+    matched = inst.sync.wait_times_diff
     inst.desc('pvp match ready')
     # print('raw', clt, crb)
 
@@ -172,12 +174,15 @@ def arena(inst):
 
     # matching
     s.click(scene_pos)
-    time.sleep(cd)
+    while True:
+        lt, rb = s.tmatch(MATCH_START)
+        if np.all(lt == slt):
+            break
 
-    while matched(False) < match_collision_endurance and wait_times > 0:
+    while matched(wait_times, False) < wait_times_endurance and wait_times > 0:
         lt, rb = s.tmatch(CANCEL)
         if np.all(lt != clt) or np.all(rb != crb):  # matched
-            matched(True)
+            matched(wait_times, True)
             # print('matched', lt, rb, ' times', wait_times)
             inst.desc('matched')
             inst.sync.finished(inst.sml.idx)

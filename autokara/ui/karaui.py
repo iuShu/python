@@ -352,6 +352,7 @@ class KaraUi(object):
 
     def copy_pos(self, event: tk.Event, label: ttk.Label):
         pos = label['text'].replace(' ', '')
+        self.root.clipboard_clear()
         self.root.clipboard_append(string=pos)
         message('copy position successful')
 
