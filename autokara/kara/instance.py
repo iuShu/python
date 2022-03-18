@@ -6,15 +6,18 @@ from kara.karaexception import KaraException
 from kara.simulator import Simulator
 from kara.task.tasklist import tasklist
 from kara.synchronizer import Synchronizer
+from kara.logger import KaraLogger
 from kara.utils import cooldown, message
 
 
 class KaraInstance(threading.Thread):
 
-    def __init__(self, sml: Simulator, sync: Synchronizer):
+    def __init__(self, sml: Simulator, logger: KaraLogger, sync: Synchronizer):
         threading.Thread.__init__(self, name='inst-' + sml.name)
         self.sml = sml
+        self.logger = logger
         self.acm = account.instance()
+        self.acm.reset()
         self.tasks = queue.Queue()
         self.task = None
         self.sync = sync
@@ -42,6 +45,8 @@ class KaraInstance(threading.Thread):
         except KaraException or RuntimeError as ke:
             self.desc(ke.__str__())
             # message(f'{th_name} exited with error: {ke.msg}')
+        except queue.Empty as e:
+            self.log('queue empty')
         except Exception as e:
             self.desc(e.__str__())
             message(f'{th_name} exited with error: {e.__str__()}')
@@ -59,6 +64,10 @@ class KaraInstance(threading.Thread):
     def desc(self, txt: str):
         if txt:
             self.ui_change('progress', txt)
+            self.log(txt)
+
+    def log(self, txt: str):
+        self.logger.log(txt)
 
     def resume(self):
         self.f_pause = False
@@ -73,6 +82,7 @@ class KaraInstance(threading.Thread):
 
     def finish(self):
         print(threading.currentThread().name, 'finished')
+        self.desc(threading.currentThread().name + ' finished')
         self.ui_change('state', 'end')
         table = self.ui_root.children['!treeview']
         for i in table.get_children():

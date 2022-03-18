@@ -13,7 +13,7 @@ def tasklist(inst):
     queue = inst.tasks
     queue.put(create(open_kara, inst))
     queue.put(create(login, inst))      # logout()
-    queue.put(create(checkin, inst))
+    # queue.put(create(checkin, inst))
     queue.put(create(karapower, inst))
     # queue.put(create(arena, inst))
     # queue.put(create(logout, inst))
@@ -39,6 +39,7 @@ def login(inst):
         raise KaraException('no more account')
 
     inst.desc('login ...')
+    inst.log('using account ' + acc[0])
     s.click(pos('email.input'))
     time.sleep(.2)
     s.cpress('lcontrol,a')
@@ -75,6 +76,7 @@ def checkin(inst):
 
 def karapower(inst):
     inst.desc('recognize kara power')
+    cooldown('panel.open')
     s = inst.sml
     lt, rb = pos('power.left.top'), pos('power.right.bottom')
     roi = s.capture()[lt[1]:rb[1], lt[0]:rb[0]]
@@ -234,6 +236,6 @@ def logout(inst):
 
     queue = inst.tasks
     queue.put(create(login, inst))
-    queue.put(create(checkin, inst))
+    # queue.put(create(checkin, inst))
     queue.put(create(karapower, inst))
     # queue.put(create(logout, inst))

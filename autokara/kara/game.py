@@ -9,6 +9,7 @@ import kara.synchronizer
 from config import config
 from kara.instance import KaraInstance
 from kara.simulator import Simulator
+from kara.logger import KaraLogger
 from kara.utils import message, execmd
 
 SML_PATH = config.instance().get('kara', 'simulator.path')
@@ -56,13 +57,16 @@ class Karastar(object):
         if not self.sml_list:
             raise RuntimeError('init unexpected error')
 
+        logger = KaraLogger()
         sync = kara.synchronizer.Synchronizer(len(self.sml_list))
         for i in range(len(self.sml_list)):
             info = self.sml_list[i][:-3]
             # dev = self.adb_devs[i]
             sml = Simulator(*info, '')
-            ki = KaraInstance(sml, sync)
+            ki = KaraInstance(sml, logger, sync)
             self.instances.append(ki)
+        logger.setDaemon(daemonic=True)
+        logger.start()
 
     def init_layout(self):
         if not self.instances:

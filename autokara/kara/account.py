@@ -27,6 +27,10 @@ class AccountManager(object):
         acc = self.conf.get('account', f'kara.account.{idx}')
         return acc.split('  ') if acc else ('none', 'none')
 
+    def reset(self):
+        self.idx = 1
+        self.next = self.peek(self.idx)[0]
+
 
 SINGLETON = AccountManager()
 

@@ -8,6 +8,10 @@ from subprocess import PIPE
 
 OCR_EXE_PATH = config.instance().get('kara', 'tesseract.path')
 
+sinfo = subprocess.STARTUPINFO()
+sinfo.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+sinfo.wShowWindow = subprocess.SW_HIDE
+
 
 def roi_rect(img):
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -41,7 +45,7 @@ def do_recognize(img) -> str:
     cv.imwrite('../resources/temp/ocr.png', img)
     root = utils.project_root()
     cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr.png stdout'
-    prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=sinfo)
     out, err = prc.communicate()
     if prc.returncode == 0:
         return out.decode().strip()
