@@ -8,6 +8,7 @@ lock = threading.Lock()
 class Synchronizer(object):
 
     def __init__(self, member: int):
+        self.member = member
         self.ev_senator = [0 for _ in range(member)]
         self.lv_senator = [0 for _ in range(member)]
         self.elv_barrier = threading.Barrier(member)
@@ -17,6 +18,9 @@ class Synchronizer(object):
 
         self.barrier = threading.Barrier(member)
         self.matched_timestamp = 0
+
+        self.matched_senator = [False for _ in range(member)]
+        self.surrender_barrier = None
 
         self.reset_senator = [False for _ in range(member)]
 
@@ -78,7 +82,7 @@ class Synchronizer(object):
             self.matched_timestamp = wait_times
         return 0
 
-    def finished(self, idx: int):
+    def end_match(self, idx: int):
         self.reset_senator[idx] = True
         if False in self.reset_senator:
             return
@@ -88,10 +92,32 @@ class Synchronizer(object):
         self.matched_timestamp = 0
         self.reset_senator = [False for _ in range(len(self.reset_senator))]
 
+    def report_matched(self, idx: int):
+        self.matched_senator[idx] = True
+
+    def ready_surrender(self):
+        if not self.surrender_barrier:
+            mb_size = self.matched_senator.count(True)
+            if mb_size < 1:
+                raise KaraException('ready surrender sync error with size ' + str(mb_size))
+            self.surrender_barrier = threading.Barrier(mb_size)
+
+        try:
+            self.surrender_barrier.wait()
+        except threading.BrokenBarrierError:
+            raise KaraException('abort error')
+
+    def end_surrender(self):
+        if self.surrender_barrier:
+            self.surrender_barrier.reset()
+        self.matched_senator = [False for _ in range(self.member)]
+
     def stop(self):
         self.elv_barrier.abort()
         self.scene_barrier.abort()
         self.barrier.abort()
+        if self.surrender_barrier:
+            self.surrender_barrier.abort()
 
 
 def test():

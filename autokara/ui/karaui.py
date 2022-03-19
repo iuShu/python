@@ -50,7 +50,7 @@ class KaraUi(object):
         m_option.add_command(label='log dir', command=self.m_logger)
         m_option.add_command(label='elv dir', command=self.m_elv)
         bv = tk.BooleanVar(value=True)
-        m_option.add_checkbutton(label='match tips', variable=bv, command=lambda: self.m_match_confirm(bv))
+        m_option.add_checkbutton(label='task confirm', variable=bv, command=lambda: self.m_match_confirm(bv))
         m_config.add_command(label='kara', command=lambda: self.m_config('kara'))
         m_config.add_command(label='account', command=lambda: self.m_config('account'))
         m_option.add_separator()

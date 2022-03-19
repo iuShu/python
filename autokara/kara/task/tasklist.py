@@ -213,7 +213,8 @@ def arena(inst):
             matched(wait_times, True)
             # print('matched', lt, rb, ' times', wait_times)
             inst.desc('matched')
-            inst.sync.finished(inst.sml.idx)
+            inst.sync.report_matched(inst.sml.idx)
+            inst.sync.end_match(inst.sml.idx)
             cooldown('arena.match.loading')
             inst.tasks.put(create(battle, inst))
             return
@@ -221,13 +222,18 @@ def arena(inst):
 
     # match failed
     # print('wait_times', wait_times)
-    inst.sync.finished(inst.sml.idx)
+    inst.sync.end_match(inst.sml.idx)
     s.click(cancel_pos)
     s.click(cancel_pos)
     cooldown('panel.quit')
     s.click(pos('team.quit'))
     cooldown('panel.quit')
-    inst.tasks.put(create(arena_prepare, inst))
+
+    lt, rb = s.match(MAIN, wait=10)
+    if np.any(lt is None):  # cancel match failed
+        inst.tasks.put(create(battle, inst))
+    else:   # cancel match success
+        inst.tasks.put(create(arena_prepare, inst))
 
 
 def battle(inst):
@@ -241,9 +247,13 @@ def battle(inst):
     inst.desc('entered pvp battle')
     s.click(pos('arena.battle.setting'))
     cooldown('panel.quit')
+
     inst.desc('surrender')
+    inst.sync.ready_surrender()
     s.click(pos('arena.battle.surrender'))
+    inst.sync.end_surrender()
     cooldown('panel.quit')
+
     if inst.check_power():
         inst.desc('next pvp match')
         inst.tasks.put(create(arena_prepare, inst))

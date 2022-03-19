@@ -56,17 +56,16 @@ class Simulator(object):
         rb = (lt[0] + w, lt[1] + h)
         return np.array(lt), np.array(rb)
 
-    def match(self, template: np.ndarray, gray=True, blur=True, th=utils.GOOD_THRESHOLD, wait=True):
-        wt = WAIT_TIMES if wait else 1
+    def match(self, template: np.ndarray, gray=True, blur=True, th=utils.GOOD_THRESHOLD, wait=WAIT_TIMES):
         thn = threading.currentThread().name
-        while wt > 0 and not self.f_stop:
+        while wait > 0 and not self.f_stop:
             lt, rb = utils.match(self.capture(), template, gray, blur, th)
             if np.any(lt is not None):
-                print(thn, 'match at', wt)
+                print(thn, 'match at', wait)
                 return lt, rb
-            print(thn, 'mismatch at', wt)
+            print(thn, 'mismatch at', wait)
             utils.cooldown('simulator.match')
-            wt -= 1
+            wait -= 1
         return None, None
 
     def match_click(self, template: np.ndarray, gray=True, blur=True, th=utils.GOOD_THRESHOLD, wait=True):

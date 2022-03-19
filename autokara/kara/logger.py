@@ -1,5 +1,6 @@
 import os.path
 import queue
+import random
 import threading
 import time
 
@@ -26,11 +27,29 @@ class KaraLogger(threading.Thread):
         self.queue.put(LogMessage(thn, txt))
 
     def run(self) -> None:
+        batch = []
         while True:
-            msg = self.queue.get()
+            msg = self.get_nowait()
             if msg:
+                batch.append(msg.serial())
+
+                for _ in range(39):
+                    msg = self.get_nowait()
+                    if not msg:
+                        break
+                    batch.append(msg.serial())
+
                 with open(self.file, 'a') as f:
-                    f.writelines((msg.serial()))
+                    f.writelines(batch)
+                batch.clear()
+
+            time.sleep(1)
+
+    def get_nowait(self):
+        try:
+            return self.queue.get_nowait()
+        except queue.Empty:
+            return None
 
 
 class LogMessage(object):
@@ -44,6 +63,23 @@ class LogMessage(object):
         return f'{self.localtime} [{self.desc}] {self.txt}\n'
 
 
+def performance():
+    logger = KaraLogger()
+    logger.start()
+
+    def generate(lg: KaraLogger):
+        for i in range(4):
+            for _ in range(30):
+                lg.log(str(random.randint(0, 100000)))
+                time.sleep(.05)
+            time.sleep(3)
+        print(threading.currentThread().name, 'end')
+        pass
+
+    for _ in range(4):
+        threading.Thread(target=generate, args=[logger]).start()
+
+
 if __name__ == '__main__':
-    print(localtime())
+    performance()
 
