@@ -136,31 +136,5 @@ def multi_test():
 
 
 if __name__ == '__main__':
-    s = Simulator(0, 'ld1', 197390, 132088, '127.0.0.1:5554')
-    # cap = s.capture()
-    # roi = cap[81:137, 103:158]
-    # cv.imwrite('../resources/area/roi.png', roi)
-    # s.match_click(cv.imread('../resources/area/roi.png'))
-    # lt, rb = s.tmatch(cv.imread('../resources/area/roi.png'))
-    # print(utils.rect_center(lt, rb))
-    # img = s.capture()
-    # roi = img[234:275, 93:190]
-    # cv.imwrite('../resources/area/roi.png', roi)
-    # cap = s.capture()
-    # cv.imshow('img', cap)
-    # cv.waitKey(0)
-
-    # multi_test()
-
-    from utils import tmatch
-    # img = cv.imread('../resources/temp/capture.png')
-    # tpl = cv.imread('../resources/cancel.png')
-    # lt, rb = (106, 86), (155, 134)
-    # img = img[lt[1]:rb[1], lt[0]:rb[0]]
-    # lt, rb = tmatch(img, tpl)
-    # cv.rectangle(img, lt, rb, (0, 0, 255), 1)
-    # cv.imshow('img', img)
-    # cv.waitKey(0)
-    # print(lt, rb)
-
+    s = Simulator(0, 'ld1', 263724, 5964846, '')
     pass

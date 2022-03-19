@@ -1,4 +1,6 @@
 import subprocess
+import threading
+
 import cv2 as cv
 import numpy as np
 
@@ -42,9 +44,10 @@ def text_recognize(img) -> str:
 
 def do_recognize(img) -> str:
     img = cv.resize(img, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
-    cv.imwrite('../resources/temp/ocr.png', img)
+    thn = threading.currentThread().name
+    cv.imwrite(f'../resources/temp/ocr-{thn}.png', img)
     root = utils.project_root()
-    cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr.png stdout'
+    cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr-{thn}.png stdout'
     prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=sinfo)
     out, err = prc.communicate()
     if prc.returncode == 0:

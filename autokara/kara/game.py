@@ -112,6 +112,7 @@ class Karastar(object):
                     break
                 handle = self.instances[idx].sml.handle
                 win32gui.SetWindowPos(handle, win32con.HWND_DESKTOP, fx, fy, dw, dh, win32con.SWP_SHOWWINDOW)
+                win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)
                 fx += dw
                 idx += 1
             fy += dh
