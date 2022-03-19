@@ -4,7 +4,7 @@ import threading
 from kara import account
 from kara.karaexception import KaraException
 from kara.simulator import Simulator
-from kara.task.tasklist import tasklist
+from kara.task import taskunit
 from kara.synchronizer import Synchronizer
 from kara.logger import KaraLogger
 from kara.utils import cooldown, message
@@ -29,11 +29,12 @@ class KaraInstance(threading.Thread):
         self.f_end = False
         self.ui_rid = None
         self.ui_root = None
+        self.flow_confirm = True
 
     def run(self):
         self.ui_change('state', 'run')
         th_name = threading.currentThread().name
-        tasklist(self)
+        # tasklist(self)
         try:
             while not self.f_end:
                 if not self.f_pause:
@@ -51,6 +52,10 @@ class KaraInstance(threading.Thread):
             self.desc(e.__str__())
             message(f'{th_name} exited with error: {e.__str__()}')
         self.finish()
+
+    def add_tasks(self, func: list):
+        for f in func:
+            self.tasks.put(taskunit.create(f, self))
 
     def bind_ui(self, rid, root):
         self.ui_rid = rid
@@ -88,7 +93,7 @@ class KaraInstance(threading.Thread):
         for i in table.get_children():
             if table.item(i)['values'][3] != 'end':
                 return
-        btn = self.ui_root.children['!button']
+        btn = self.ui_root.children['!frame'].children['!button']
         btn['image'] = 'start'
         btn['text'] = 'start'
         btn['state'] = 'normal'

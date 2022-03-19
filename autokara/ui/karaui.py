@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter.messagebox import askyesno
 from tkinter import ttk, Tk, PhotoImage
@@ -6,8 +7,12 @@ import cv2 as cv
 
 import script.textocr
 from config import config
+from ui.multicombox import Combopicker
+from kara.constants import ELV_PATH
 from kara.game import Karastar
+from kara.logger import LOG_DIR
 from kara.utils import message, show, wincap
+from kara.task.tasklist import tasks
 
 
 class KaraUi(object):
@@ -16,6 +21,8 @@ class KaraUi(object):
         self.root = None
         self.table = None
         self.karastar = None
+        self.tasks = tasks()
+        self.flow_confirm = True
         self.init_panel()
         self.child = None
         self.capture_wnd = None
@@ -40,6 +47,10 @@ class KaraUi(object):
         m_option.add_command(label='init', command=self.m_init)
         m_option.add_command(label='capture', command=self.m_capture)
         m_option.add_cascade(label='config', menu=m_config)
+        m_option.add_command(label='log dir', command=self.m_logger)
+        m_option.add_command(label='elv dir', command=self.m_elv)
+        bv = tk.BooleanVar(value=True)
+        m_option.add_checkbutton(label='match tips', variable=bv, command=lambda: self.m_match_confirm(bv))
         m_config.add_command(label='kara', command=lambda: self.m_config('kara'))
         m_config.add_command(label='account', command=lambda: self.m_config('account'))
         m_option.add_separator()
@@ -51,10 +62,22 @@ class KaraUi(object):
         root.config(menu=menu)
 
         padx = 10
-        btn = ttk.Button(root, text='start', compound=tk.LEFT, image='start')
+        frame = ttk.Frame(root, padding=10)
+        frame.place(x=0, y=0)
+
+        btn = ttk.Button(frame, text='start', compound=tk.LEFT, image='start')
         btn['state'] = tk.DISABLED
         btn.bind('<Button-1>', self.on_click)
-        btn.place(x=padx, y=10)
+        btn.pack(side=tk.LEFT)
+
+        picker = Combopicker(frame, values=self.tasks.keys())
+        picker.select_all()
+        picker.pack(side=tk.LEFT, padx=10)
+
+        # btn_task = ttk.Button(frame, text='all task')
+        # btn_task.bind('<Button-1>', self.on_all_task)
+        # btn_task.place(x=325, y=10)
+        # btn_task.pack(side=tk.LEFT)
 
         sep = ttk.Separator(root, orient=tk.HORIZONTAL)
         sep.pack(fill=tk.X, padx=10, pady=45)
@@ -63,7 +86,7 @@ class KaraUi(object):
         label_acc.place(x=padx, y=58)
         btn_list = ttk.Button(root, text='show all')
         btn_list.bind('<Button-1>', self.show_all_account)
-        btn_list.place(x=326, y=55)
+        btn_list.place(x=325, y=55)
 
         tree = ttk.Treeview(root, show='headings')
         tree["columns"] = ("name", "progress", "account", "state")
@@ -103,12 +126,15 @@ class KaraUi(object):
             return
 
         self.karastar = ks
+        func = self.current_tasks()
         instances = ks.instances
         for i in range(len(instances)):
             inst = instances[i]
             rid = self.table.insert('', tk.END, values=[inst.sml.name, 'ready', '', 'init'])
+            inst.flow_confirm = self.flow_confirm
+            inst.add_tasks(func)
             inst.bind_ui(rid, self.root)
-        self.root.children['!button']['state'] = tk.NORMAL
+        self.root.children['!frame'].children['!button']['state'] = tk.NORMAL
 
     def m_capture(self):
         if not self.karastar:
@@ -118,6 +144,23 @@ class KaraUi(object):
 
         inst = self.karastar.instances[0]
         show(inst.sml.capture())
+
+    @staticmethod
+    def m_logger():
+        path = os.path.abspath(LOG_DIR)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        os.startfile(path)
+
+    @staticmethod
+    def m_elv():
+        path = os.path.abspath(ELV_PATH)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        os.startfile(path)
+
+    def m_match_confirm(self, bv: tk.BooleanVar):
+        self.flow_confirm = bv.get()
 
     def m_config(self, file: str):
         child_wnd = tk.Toplevel(self.root)
@@ -355,6 +398,13 @@ class KaraUi(object):
         self.root.clipboard_clear()
         self.root.clipboard_append(string=pos)
         message('copy position successful')
+
+    def current_tasks(self) -> list:
+        picker = self.root.children['!frame'].children['!combopicker']
+        func = []
+        for t in picker.current_value.split(','):
+            func.append(self.tasks[t])
+        return func
 
 
 if __name__ == '__main__':

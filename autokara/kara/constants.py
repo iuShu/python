@@ -12,6 +12,7 @@ MATCH_START = cv.imread('../resources/match_start.png')
 CANCEL = cv.imread('../resources/cancel.png')
 ARENA_SQUIRREL = cv.imread('../resources/squirrel.png')
 
+ELV_PATH = '../resources/elv/'
 
 ARENA_GENERAL = {
     10: 'arena.general.baby',

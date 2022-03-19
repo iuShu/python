@@ -166,3 +166,7 @@ def execmd(cmd) -> list:
 
 def localtime() -> str:
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+
+
+def ltime() -> str:
+    return time.strftime('%H%M%S', time.localtime())

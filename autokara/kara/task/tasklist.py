@@ -1,22 +1,34 @@
+import os.path
+
 from kara.task.taskunit import create
 from kara.karaexception import KaraException
-from kara.utils import cooldown, pos
+from kara.utils import cooldown, pos, ltime
 from kara.constants import *
 from config import config
 from script import textocr
+from tkinter.messagebox import askyesno
 
 import time
 import numpy as np
 
 
+def tasks() -> dict:
+    total = [
+        open_kara,
+        login,
+        karapower
+    ]
+
+    temp = dict()
+    for i in total:
+        temp[i.__name__] = i
+    return temp
+
+
 def tasklist(inst):
     queue = inst.tasks
-    queue.put(create(open_kara, inst))
-    queue.put(create(login, inst))      # logout()
-    # queue.put(create(checkin, inst))
-    queue.put(create(karapower, inst))
-    # queue.put(create(arena, inst))
-    # queue.put(create(logout, inst))
+    for v in tasks().values():
+        queue.put(create(v, inst))
 
 
 def open_kara(inst):
@@ -106,14 +118,22 @@ def arena_prepare(inst):
         inst.arena_offset = False
 
     inst.desc('recognizing ev lv')
-    img, ei, li = s.capture(), [], []
+    img, ti, ei, li = s.capture(), [], [], []
     lt, rb = np.array(pos('arena.kara.lt')), np.array(pos('arena.kara.rb'))
     xadd, yadd = pos('arena.kara.inc')
     for _ in range(3):
+        tlt = lt
         ei.append(img[lt[1]:rb[1], lt[0]:rb[0]])
         lt, rb = lt + (0, yadd), rb + (0, yadd)
+        trb = rb
         li.append(img[lt[1]:rb[1], lt[0]:rb[0]])
+        ti.append(img[tlt[1]:trb[1], tlt[0]:trb[0]])
         lt, rb = lt + (xadd, -yadd), rb + (xadd, -yadd)
+
+    roi = np.hstack(ti)
+    if not os.path.exists(ELV_PATH):
+        os.makedirs(ELV_PATH)
+    cv.imwrite(f'{ELV_PATH}{s.name}-{ltime()}.png', roi)
 
     mxe, mxl = 0, 0
     for e in ei:
@@ -137,6 +157,12 @@ def arena_prepare(inst):
     inst.desc(f'ev {mxe} and lv {mxl}')
     max_ev, max_lv = inst.sync.join(inst.sml.idx, mxe, mxl)
     max_scene, scene = get_scene(max_ev, max_lv), get_scene(mxe, mxl)
+    inst.desc(f'max {max_scene} / self {scene}')
+
+    if inst.flow_confirm and not askyesno(title='Task confirm', message='Are you sure to continue the task ?'):
+        inst.desc('task flow abort cause client confirmed')
+        return
+
     if max_scene == scene:
         if inst.sync.same_scene(inst.sml.idx, True):
             inst.arena_scene = max_scene
@@ -236,6 +262,4 @@ def logout(inst):
 
     queue = inst.tasks
     queue.put(create(login, inst))
-    # queue.put(create(checkin, inst))
     queue.put(create(karapower, inst))
-    # queue.put(create(logout, inst))
