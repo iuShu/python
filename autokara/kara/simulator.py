@@ -12,7 +12,7 @@ import win32ui
 
 from config import config
 from kara import action, utils
-from PIL import ImageGrab
+# from PIL import ImageGrab
 
 WAIT_TIMES = config.instance().getint('kara', 'simulator.wait.times')
 SIMULATOR_PATH = config.instance().get('kara', 'simulator.path')

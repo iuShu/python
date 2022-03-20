@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 from ctypes import windll
-from PIL import ImageGrab
+# from PIL import ImageGrab
 from subprocess import PIPE
 
 import cv2 as cv
@@ -63,10 +63,11 @@ def wincap(handle):
 
 
 def pilcap(handle):
-    x, y, x2, y2 = win32gui.GetWindowRect(handle)
-    cap = ImageGrab.grab((x, y, x2, y2))
-    img = cv.cvtColor(np.array(cap), cv.COLOR_RGB2BGR)
-    return img
+    # x, y, x2, y2 = win32gui.GetWindowRect(handle)
+    # cap = ImageGrab.grab((x, y, x2, y2))
+    # img = cv.cvtColor(np.array(cap), cv.COLOR_RGB2BGR)
+    # return img
+    pass
 
 
 def tmatch(screen, template):

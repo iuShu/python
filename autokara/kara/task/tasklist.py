@@ -157,7 +157,7 @@ def arena_prepare(inst):
     inst.desc(f'ev {mxe} and lv {mxl}')
     max_ev, max_lv = inst.sync.join(inst.sml.idx, mxe, mxl)
     max_scene, scene = get_scene(max_ev, max_lv), get_scene(mxe, mxl)
-    inst.desc(f'max {max_scene} / self {scene}')
+    inst.desc(f'self {scene} / max {max_scene}')
 
     if inst.flow_confirm and not askyesno(title='Task confirm', message='Are you sure to continue the task ?'):
         inst.desc('task flow abort cause client confirmed')
@@ -181,31 +181,31 @@ def arena(inst):
     # prepare
     s = inst.sml
     scene_pos, cancel_pos = pos(inst.arena_scene), pos('arena.match.cancel.button')
-    cd = config.instance().getint('kara', 'arena.startup.cooldown') / 1000
-    # if inst.arena_offset:
-    #     s.click(scene_pos)
-    #     time.sleep(cd)
-    #     s.click(cancel_pos)
-    #     s.click(cancel_pos)
-    #     time.sleep(cd)
 
     clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
     slt = pos('arena.match.start.lt')
     wait_times = config.instance().getint('kara', 'arena.match.wait.time')
-    match_collision_endurance = config.instance().getint('kara', 'arena.match.collision.endurance') / 1000
     wait_times_endurance = config.instance().getint('kara', 'arena.match.wait.endurance')
+    match_check_times = config.instance().getint('kara', 'arena.match.check.times')
     matched = inst.sync.wait_times_diff
     inst.desc('pvp match ready')
-    # print('raw', clt, crb)
 
+    inst.sync.coordinate(inst.sml)
     inst.sync.ready_match()
 
     # matching
     s.click(scene_pos)
-    while True:
+    while match_check_times > 0:
         lt, rb = s.tmatch(MATCH_START)
         if np.all(lt == slt):
             break
+        match_check_times -= 1
+    if match_check_times < 1:
+        inst.desc('can not start match')
+        inst.sync.cancel_all()
+        inst.sync.end_match(inst.sml.idx)
+        inst.tasks.put(create(arena_prepare, inst))
+        return
 
     while matched(wait_times, False) < wait_times_endurance and wait_times > 0:
         lt, rb = s.tmatch(CANCEL)
@@ -231,8 +231,10 @@ def arena(inst):
 
     lt, rb = s.match(MAIN, wait=10)
     if np.any(lt is None):  # cancel match failed
+        inst.desc('cancel failed, enter battle')
         inst.tasks.put(create(battle, inst))
     else:   # cancel match success
+        inst.desc('cancel ok')
         inst.tasks.put(create(arena_prepare, inst))
 
 

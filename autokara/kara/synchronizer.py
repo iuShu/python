@@ -1,8 +1,10 @@
 import threading
 import time
 from kara.karaexception import KaraException
+from kara.utils import pos
 
 lock = threading.Lock()
+CANCEL_POS = pos('arena.match.cancel.button')
 
 
 class Synchronizer(object):
@@ -18,6 +20,8 @@ class Synchronizer(object):
 
         self.barrier = threading.Barrier(member)
         self.matched_timestamp = 0
+
+        self.coordinators = [None for _ in range(member)]
 
         self.matched_senator = [False for _ in range(member)]
         self.surrender_barrier = None
@@ -44,6 +48,15 @@ class Synchronizer(object):
         v = False in self.scene_check
         self.scene_barrier.reset()
         return not v
+
+    def coordinate(self, sml):
+        self.coordinators[sml.idx] = sml
+
+    def cancel_all(self):
+        for sml in self.coordinators:
+            sml.click(CANCEL_POS)
+        self.matched_timestamp = 999
+        self.matched_timestamp = 998
 
     def ready_match(self):
         try:
