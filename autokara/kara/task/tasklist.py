@@ -195,7 +195,7 @@ def arena(inst):
 
     # matching
     s.click(scene_pos)
-    while match_check_times > 0:
+    while not inst.f_end and match_check_times > 0:
         lt, rb = s.tmatch(MATCH_START)
         if np.all(lt == slt):
             break
@@ -207,7 +207,7 @@ def arena(inst):
         inst.tasks.put(create(arena_prepare, inst))
         return
 
-    while matched(wait_times, False) < wait_times_endurance and wait_times > 0:
+    while not inst.f_end and matched(wait_times, False) < wait_times_endurance and wait_times > 0:
         lt, rb = s.tmatch(CANCEL)
         if np.all(lt != clt) or np.all(rb != crb):  # matched
             matched(wait_times, True)
