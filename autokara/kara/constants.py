@@ -11,6 +11,7 @@ CHECKIN = cv.imread('../resources/checkin.png')
 MATCH_START = cv.imread('../resources/match_start.png')
 CANCEL = cv.imread('../resources/cancel.png')
 ARENA_SQUIRREL = cv.imread('../resources/squirrel.png')
+BF_READY = cv.imread('../resources/battlefield_ready.png')
 
 ELV_PATH = '../resources/elv/'
 

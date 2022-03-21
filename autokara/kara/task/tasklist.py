@@ -109,13 +109,19 @@ def arena_prepare(inst):
     s = inst.sml
     inst.desc('enter arena')
     s.click(pos('arena.button'))
-    cooldown('arena.panel.open')
+    # cooldown('arena.panel.open')
+    lt, rb = s.match(BF_READY)
+    if np.any(lt is None):
+        raise KaraException('enter arena error')
+
     if inst.arena_offset:
         s.click(pos('team.quit'))
         cooldown('panel.quit')
-        s.click(pos('arena.button'))
-        cooldown('arena.panel.open')
+        # s.click(pos('arena.button'))
+        # cooldown('arena.panel.open')
         inst.arena_offset = False
+        inst.tasks.put(create(arena_prepare, inst))
+        return
 
     inst.desc('recognizing ev lv')
     img, ti, ei, li = s.capture(), [], [], []
@@ -225,6 +231,8 @@ def arena(inst):
     inst.sync.end_match(inst.sml.idx)
     s.click(cancel_pos)
     s.click(cancel_pos)
+    if inst.f_end:
+        return
     cooldown('panel.quit')
     s.click(pos('team.quit'))
     cooldown('panel.quit')

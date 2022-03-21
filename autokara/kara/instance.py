@@ -1,5 +1,6 @@
 import queue
 import threading
+import traceback
 
 from kara import account
 from kara.karaexception import KaraException
@@ -49,7 +50,7 @@ class KaraInstance(threading.Thread):
         except queue.Empty as e:
             self.log('queue empty')
         except Exception as e:
-            self.desc(e.__str__())
+            self.desc(traceback.format_exc())
             message(f'{th_name} exited with error: {e.__str__()}')
         self.finish()
 
