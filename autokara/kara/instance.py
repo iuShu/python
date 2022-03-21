@@ -50,7 +50,8 @@ class KaraInstance(threading.Thread):
         except queue.Empty as e:
             self.log('queue empty')
         except Exception as e:
-            self.desc(traceback.format_exc())
+            self.desc(e.__str__())
+            self.log(traceback.format_exc())
             message(f'{th_name} exited with error: {e.__str__()}')
         self.finish()
 
