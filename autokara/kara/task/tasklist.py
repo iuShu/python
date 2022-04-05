@@ -109,12 +109,13 @@ def arena_prepare(inst):
     s = inst.sml
     inst.desc('enter arena')
     s.click(pos('arena.button'))
-    # cooldown('arena.panel.open')
+    cooldown('arena.panel.open')
     lt, rb = s.match(BF_READY)
     if np.any(lt is None):
         raise KaraException('enter arena error')
 
     if inst.arena_offset:
+        inst.desc('ready re-enter arena')
         s.click(pos('team.quit'))
         cooldown('panel.quit')
         # s.click(pos('arena.button'))
