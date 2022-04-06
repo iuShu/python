@@ -240,10 +240,12 @@ def text(img, txt, p, color=(0, 255, 255), scale=.5):
 
 
 if __name__ == '__main__':
-    select_area()
+    # select_area()
     # contours()
     # dilation()
+    # erosion()
     # hsv_picker()
-    # thresh()
+    thresh()
+    # grabcut()
 
 

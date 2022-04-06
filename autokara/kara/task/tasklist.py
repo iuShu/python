@@ -100,7 +100,8 @@ def karapower(inst):
         if available > 0:
             inst.power = available
             inst.arena_offset = True
-            inst.tasks.put(create(arena_prepare, inst))
+            # inst.tasks.put(create(arena_prepare, inst))
+            inst.tasks.put(create(pre_arena, inst))
             return
     inst.tasks.put(create(logout, inst))
 
@@ -184,6 +185,50 @@ def arena_prepare(inst):
         inst.tasks.put(create(logout, inst))
 
 
+def pre_arena(inst):
+    s = inst.sml
+    inst.desc('enter team panel')
+    s.click(pos('role.button'))
+    cooldown('role.panel.open')
+
+    cap = s.capture()
+    rlt, rrb = pos('role.kara.lv.lt'), pos('role.kara.lv.rb')
+    roi = cap[rlt[1]:rrb[1], rlt[0]:rrb[0]]
+    gray = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
+    if not os.path.exists(ELV_PATH):
+        os.makedirs(ELV_PATH)
+    cv.imwrite(f'{ELV_PATH}{s.name}-{ltime()}.png', roi)
+
+    resized = cv.resize(gray, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
+    txt = textocr.do_recognize(resized, only_digits=True)
+    if not txt or not txt.isdigit():
+        inst.desc('recognizing lv error: ' + txt)
+        return
+
+    lv = int(txt)
+    inst.desc(f'max lv is {lv}')
+    max_ev, max_lv = inst.sync.join(inst.sml.idx, 0, lv)
+    max_scene, scene = get_scene(0, max_lv), get_scene(0, lv)
+    inst.desc(f'self-{scene} / max-{max_scene}')
+
+    if max_scene == scene:
+        if inst.sync.same_scene(inst.sml.idx, True):
+            s.click(pos('team.quit'))
+            cooldown('panel.quit')
+            s.click(pos('arena.button'))
+            cooldown('arena.panel.open')
+            inst.arena_scene = max_scene
+            inst.tasks.put(create(arena, inst))
+        else:
+            inst.tasks.put(create(pre_arena, inst))
+    else:
+        inst.sync.same_scene(inst.sml.idx, False)
+        inst.desc(f'mismatch: {lv} ≠ {max_lv}')
+        s.click(pos('team.quit'))
+        cooldown('panel.quit')
+        inst.tasks.put(create(logout, inst))
+
+
 def arena(inst):
     # prepare
     s = inst.sml
@@ -196,6 +241,10 @@ def arena(inst):
     match_check_times = config.instance().getint('kara', 'arena.match.check.times')
     matched = inst.sync.wait_times_diff
     inst.desc('pvp match ready')
+
+    if inst.flow_confirm and not askyesno(title='Task confirm', message='Are you sure to continue the task ?'):
+        inst.desc('task flow abort cause client confirmed')
+        return
 
     inst.sync.coordinate(inst.sml)
     inst.sync.ready_match()
@@ -211,7 +260,8 @@ def arena(inst):
         inst.desc('can not start match')
         inst.sync.cancel_all()
         inst.sync.end_match(inst.sml.idx)
-        inst.tasks.put(create(arena_prepare, inst))
+        # inst.tasks.put(create(arena_prepare, inst))
+        inst.tasks.put(create(pre_arena, inst))
         return
 
     while not inst.f_end and matched(wait_times, False) < wait_times_endurance and wait_times > 0:
@@ -244,7 +294,8 @@ def arena(inst):
         inst.tasks.put(create(battle, inst))
     else:   # cancel match success
         inst.desc('cancel ok')
-        inst.tasks.put(create(arena_prepare, inst))
+        # inst.tasks.put(create(arena_prepare, inst))
+        inst.tasks.put(create(pre_arena, inst))
 
 
 def battle(inst):
@@ -267,7 +318,8 @@ def battle(inst):
 
     if inst.check_power():
         inst.desc('next pvp match')
-        inst.tasks.put(create(arena_prepare, inst))
+        # inst.tasks.put(create(arena_prepare, inst))
+        inst.tasks.put(create(pre_arena, inst))
     else:
         inst.desc('no power, logout')
         inst.tasks.put(create(logout, inst))

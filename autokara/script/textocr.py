@@ -42,12 +42,13 @@ def text_recognize(img) -> str:
     return do_recognize(area)
 
 
-def do_recognize(img) -> str:
+def do_recognize(img, only_digits=False) -> str:
     img = cv.resize(img, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
     thn = threading.currentThread().name
     cv.imwrite(f'../resources/temp/ocr-{thn}.png', img)
     root = utils.project_root()
-    cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr-{thn}.png stdout'
+    cmd = f'{OCR_EXE_PATH}tesseract {root}resources\\temp\\ocr-{thn}.png stdout '
+    cmd += 'outputbase digits' if only_digits else ''
     prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=sinfo)
     out, err = prc.communicate()
     if prc.returncode == 0:
