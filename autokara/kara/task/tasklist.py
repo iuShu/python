@@ -67,6 +67,7 @@ def login(inst):
     s.press('return')
     cooldown('account.input')
     s.click(pos('login.button'))
+    cooldown('login.wait')
     lt, rb = s.match(MAIN)
     if np.any(lt is None):
         raise KaraException('login failure')

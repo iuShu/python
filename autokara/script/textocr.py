@@ -53,7 +53,7 @@ def do_recognize(img, only_digits=False) -> str:
     out, err = prc.communicate()
     if prc.returncode == 0:
         return out.decode().strip()
-    raise RuntimeError('tesseract recognize error')
+    raise RuntimeError('tesseract recognize error while execute ' + cmd)
 
 
 def practice():
