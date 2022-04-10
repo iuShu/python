@@ -53,10 +53,9 @@ class Synchronizer(object):
         self.coordinators[sml.idx] = sml
 
     def cancel_all(self):
-        for sml in self.coordinators:
-            sml.click(CANCEL_POS)
+        # for sml in self.coordinators:
+        #     sml.click(CANCEL_POS)
         self.matched_timestamp = 999
-        self.matched_timestamp = 998
 
     def ready_match(self):
         try:

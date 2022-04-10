@@ -221,9 +221,10 @@ def pre_arena(inst):
             inst.arena_scene = max_scene
             inst.tasks.put(create(arena, inst))
         else:
-            inst.tasks.put(create(pre_arena, inst))
+            # inst.tasks.put(create(pre_arena, inst))
+            raise KaraException('sync scene error')
     else:
-        inst.sync.same_scene(inst.sml.idx, False)
+        # inst.sync.same_scene(inst.sml.idx, False)
         inst.desc(f'mismatch: {lv} ≠ {max_lv}')
         s.click(pos('team.quit'))
         cooldown('panel.quit')
@@ -233,8 +234,11 @@ def pre_arena(inst):
 def arena(inst):
     # prepare
     s = inst.sml
-    scene_pos, cancel_pos = pos(inst.arena_scene), pos('arena.match.cancel.button')
+    lt, rb = s.match(BF_READY)
+    if np.any(lt is None):
+        raise KaraException('enter arena error')
 
+    scene_pos, cancel_pos = pos(inst.arena_scene), pos('arena.match.cancel.button')
     clt, crb = pos('arena.match.cancel.lt'), pos('arena.match.cancel.rb')
     slt = pos('arena.match.start.lt')
     wait_times = config.instance().getint('kara', 'arena.match.wait.time')
@@ -247,23 +251,25 @@ def arena(inst):
         inst.desc('task flow abort cause client confirmed')
         return
 
-    inst.sync.coordinate(inst.sml)
+    # inst.sync.coordinate(inst.sml)
     inst.sync.ready_match()
 
     # matching
     s.click(scene_pos)
+    time.sleep(.05)
+    s.click(scene_pos)      # re-confirm
     while not inst.f_end and match_check_times > 0:
         lt, rb = s.tmatch(MATCH_START)
         if np.all(lt == slt):
             break
+
         match_check_times -= 1
-    if match_check_times < 1:
-        inst.desc('can not start match')
-        inst.sync.cancel_all()
-        inst.sync.end_match(inst.sml.idx)
-        # inst.tasks.put(create(arena_prepare, inst))
-        inst.tasks.put(create(pre_arena, inst))
-        return
+
+        if match_check_times < 30:
+            s.click(cancel_pos)     # might start match this moment
+            inst.sync.cancel_all()
+            inst.sync.end_match(inst.sml.idx)
+            inst.desc('too long to start match')
 
     while not inst.f_end and matched(wait_times, False) < wait_times_endurance and wait_times > 0:
         lt, rb = s.tmatch(CANCEL)
@@ -271,37 +277,35 @@ def arena(inst):
             matched(wait_times, True)
             # print('matched', lt, rb, ' times', wait_times)
             inst.desc('matched')
-            inst.sync.report_matched(inst.sml.idx)
+            inst.sync.report_matched(inst.sml.idx)  # for sync surrender
             inst.sync.end_match(inst.sml.idx)
-            cooldown('arena.match.loading')
             inst.tasks.put(create(battle, inst))
             return
         wait_times -= 1
 
     # match failed
     # print('wait_times', wait_times)
+    s.click(cancel_pos)
+    time.sleep(.05)
+    s.click(cancel_pos)     # re-confirm
     inst.sync.end_match(inst.sml.idx)
-    s.click(cancel_pos)
-    s.click(cancel_pos)
     if inst.f_end:
         return
-    cooldown('panel.quit')
-    s.click(pos('team.quit'))
-    cooldown('panel.quit')
 
-    lt, rb = s.match(MAIN, wait=10)
+    lt, rb = s.match(BF_READY, wait=15)
     if np.any(lt is None):  # cancel match failed
         inst.desc('cancel failed, enter battle')
         inst.tasks.put(create(battle, inst))
     else:   # cancel match success
-        inst.desc('cancel ok')
-        # inst.tasks.put(create(arena_prepare, inst))
-        inst.tasks.put(create(pre_arena, inst))
+        inst.desc('cancel ok, ready next match')
+        inst.tasks.put(create(arena, inst))
 
 
 def battle(inst):
     inst.desc('pvp loading')
+    cooldown('arena.match.loading')
     inst.power -= 1
+    inst.arena_counter -= 1
     s = inst.sml
     lt, rb = s.match(ARENA_SQUIRREL, blur=False)
     if np.any(lt is None):
@@ -316,13 +320,16 @@ def battle(inst):
     s.click(pos('arena.battle.surrender'))
     inst.sync.end_surrender()
     cooldown('panel.quit')
+    cooldown('panel.quit')
 
-    if inst.check_power():
+    if inst.check_power() and inst.arena_counter > 0:
         inst.desc('next pvp match')
         # inst.tasks.put(create(arena_prepare, inst))
-        inst.tasks.put(create(pre_arena, inst))
+        s.click(pos('arena.button'))
+        cooldown('arena.panel.open')
+        inst.tasks.put(create(arena, inst))
     else:
-        inst.desc('no power, logout')
+        inst.desc('no power or arena limit, logout')
         inst.tasks.put(create(logout, inst))
 
 
