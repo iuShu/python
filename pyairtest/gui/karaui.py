@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter.messagebox import askyesno
 from tkinter import ttk, Tk, PhotoImage
@@ -7,11 +8,11 @@ import textocr
 from constants import *
 from gui.multicombox import Combopicker
 from script.config import conf
+from script.tasklist import tasks
 from script import manager
 from utils import message, show, try_do
 
 # from kara.logger import LOG_DIR
-# from kara.task.tasklist import tasks
 
 
 class KaraUi(object):
@@ -19,8 +20,13 @@ class KaraUi(object):
     def __init__(self):
         self.root = None
         self.table = None
+
         self.simulators = []
-        self.tasks = dict()     # TODO
+        self._indicator = None
+        self._pause = None
+        self._stop = None
+
+        self.tasks = tasks()
         self.flow_confirm = True
         self.init_panel()
         self.child = None
@@ -118,18 +124,22 @@ class KaraUi(object):
         for i in self.table.get_children():
             self.table.delete(i)
         try:
-            simulators = manager.initialize()
+            self.switch_local_adb()
+            simulators, i, p, s = manager.initialize()
         except RuntimeError as re:
             message(re.__str__())
             return
 
-        # func = self.current_tasks()
+        func = self.current_tasks()
         for simulator in simulators:
             rid = self.table.insert('', tk.END, values=[simulator.name, 'ready', '', 'init'])
             # simulator.add_tasks(func)
             # inst.bind_ui(rid, self.root)
         self.root.children['!frame'].children['!button']['state'] = tk.NORMAL
         self.simulators = simulators
+        self._indicator = i
+        self._pause = p
+        self._stop = s
 
     def m_capture(self):
         if not self.simulators:
@@ -248,7 +258,7 @@ class KaraUi(object):
             btn['image'] = 'end'
             btn['text'] = 'end'
         else:
-            [i.terminate() for i in self.simulators]
+            self._stop.set()
             btn['image'] = 'start'
             btn['text'] = 'start'
         btn['state'] = tk.NORMAL
@@ -392,6 +402,16 @@ class KaraUi(object):
         for t in picker.current_value.split(','):
             func.append(self.tasks[t])
         return func
+
+    @staticmethod
+    def switch_local_adb():
+        if not os.path.exists(airadb_dir):
+            return
+
+        from airtest.core.android.constant import DEFAULT_ADB_PATH
+        simulator_path = conf.get('kara', 'simulator.path')
+        DEFAULT_ADB_PATH['Windows'] = os.path.normpath(simulator_path + 'airadb/adb.exe')
+        message('switch adb to ' + DEFAULT_ADB_PATH['Windows'])
 
 
 if __name__ == '__main__':

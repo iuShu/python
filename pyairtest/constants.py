@@ -5,6 +5,7 @@ res_dir = normpath(root_dir + '/resources')
 temp_dir = normpath(res_dir + '/temp')
 gui_dir = normpath(res_dir + '/gui')
 template_dir = normpath(res_dir + '/template')
+airadb_dir = normpath(root_dir + '/airadb')
 
 ico_kara = normpath(gui_dir + '/kara.png')
 ico_start = normpath(gui_dir + '/start.png')
@@ -18,3 +19,6 @@ capture_file = normpath(temp_dir + '/capture.png')
 
 log_file = ''
 elv_file = ''
+
+PROC_INIT = 0
+PROC_NORMAL = 8

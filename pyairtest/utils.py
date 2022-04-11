@@ -9,8 +9,11 @@ def error(msg: str):
 
 
 def execmd(cmd: str) -> str:
-    gbk_bytes = subprocess.check_output(cmd, shell=True)
-    return gbk_bytes.decode('gbk')
+    try:
+        gbk_bytes = subprocess.check_output(cmd, shell=True)
+        return gbk_bytes.decode('gbk')
+    except Exception:
+        pass
 
 
 def message(msg, title='Karastar Assistant Tips'):

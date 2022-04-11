@@ -1,3 +1,4 @@
+from multiprocessing import Manager
 import win32gui
 import win32con
 from airtest.core.android import Android
@@ -5,29 +6,43 @@ from airtest.core.android.adb import ADB
 from script.config import conf
 from script.simulator import Simulator
 from utils import execmd, error
+from constants import PROC_INIT
 
-manager_adb = ADB()
+manager_adb = None
 
 
-def initialize() -> list:
+def initialize() -> tuple:
     ld_cmd = conf.get('kara', 'simulator.path') + 'ldconsole list2'
     ret = execmd(ld_cmd)
     if not ret:
-        raise RuntimeError('execute ldconsole command error')
+        error('execute ldconsole command error')
 
     lines = [e for e in filter(lambda x: len(x) > 1 and x.split(',')[4] == '1', ret.split('\n'))]
+    if not lines:
+        error('no available simulator')
+
+    global manager_adb
+    manager_adb = ADB() if not manager_adb else manager_adb
     devs = manager_adb.devices(state="device")
     if len(devs) != len(lines):
         error('simulator devices info mismatched')
 
     try:
         simulators = []
+        mng = Manager()
+        sync = mng.Array('i', [PROC_INIT] * 4)
+        _indicator = mng.Array('i', [0] * 4)
+        _pause = mng.Event()
+        _stop = mng.Event()
+        args = [[], '', sync, _indicator, _pause, _stop]
         for i in range(len(devs)):
             info = lines[i].split(',')
-            simulator = Simulator(*info[:4], devs[i][0])
+            args[0] = info[:4]
+            args[1] = devs[i][0]
+            simulator = Simulator(*args)
             simulators.append(simulator)
         _layout(simulators)
-        return simulators
+        return simulators, _indicator, _pause, _stop
     except RuntimeError:
         error('initialize simulator error')
 
@@ -60,10 +75,6 @@ def _layout(simulators: list):
         resolution = dev.get_current_resolution()
         if ww != resolution[0] or wh != resolution[1]:
             error('please confirm collapse the rightside toolbar and change resolution to 960 x 540')
-
-
-def cleanup():
-    manager_adb.kill_server()
 
 
 if __name__ == '__main__':
