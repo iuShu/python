@@ -23,8 +23,8 @@ class KaraUi(object):
 
         self.simulators = []
         self._indicator = None
-        self._pause = None
-        self._stop = None
+        self._not_pause = None
+        self._not_stop = None
 
         self.tasks = tasks()
         self.flow_confirm = True
@@ -70,19 +70,20 @@ class KaraUi(object):
         frame = ttk.Frame(root, padding=10)
         frame.place(x=0, y=0)
 
-        btn = ttk.Button(frame, text='start', compound=tk.LEFT, image='start')
+        btn = ttk.Button(frame, text='start', compound=tk.LEFT, image='start', width=8)
         btn['state'] = tk.DISABLED
-        btn.bind('<Button-1>', self.on_click)
+        btn.bind('<Button-1>', self.start_end)
         btn.pack(side=tk.LEFT)
 
+        btn = ttk.Button(frame, text='pause', compound=tk.LEFT, image='ipause', width=8)
+        btn['state'] = tk.DISABLED
+        btn.bind('<Button-1>', self.pause_resume)
+        btn.pack(side=tk.LEFT, padx=5)
+
+        print(self.tasks.keys())
         picker = Combopicker(frame, values=self.tasks.keys())
         picker.select_all()
-        picker.pack(side=tk.LEFT, padx=10)
-
-        # btn_task = ttk.Button(frame, text='all task')
-        # btn_task.bind('<Button-1>', self.on_all_task)
-        # btn_task.place(x=325, y=10)
-        # btn_task.pack(side=tk.LEFT)
+        picker.pack(side=tk.LEFT, padx=0)
 
         sep = ttk.Separator(root, orient=tk.HORIZONTAL)
         sep.pack(fill=tk.X, padx=10, pady=45)
@@ -121,25 +122,29 @@ class KaraUi(object):
             message('already initialized')
             return
 
-        for i in self.table.get_children():
-            self.table.delete(i)
+        # for i in self.table.get_children():
+        #     self.table.delete(i)
         try:
             self.switch_local_adb()
-            simulators, i, p, s = manager.initialize()
+            simulators, i, np, ns = manager.initialize()
         except RuntimeError as re:
             message(re.__str__())
             return
 
-        func = self.current_tasks()
+        serial = self.current_task_serial()
         for simulator in simulators:
+            self._indicator[simulator.idx] = serial     # assign task serial
             rid = self.table.insert('', tk.END, values=[simulator.name, 'ready', '', 'init'])
             # simulator.add_tasks(func)
             # inst.bind_ui(rid, self.root)
-        self.root.children['!frame'].children['!button']['state'] = tk.NORMAL
-        self.simulators = simulators
+
         self._indicator = i
-        self._pause = p
-        self._stop = s
+        self._not_stop = ns
+        self._not_pause = np
+        self.simulators = simulators
+
+        btn_start_end = self.root.children['!frame'].children['!button']
+        btn_start_end['state'] = tk.NORMAL
 
     def m_capture(self):
         if not self.simulators:
@@ -245,22 +250,43 @@ class KaraUi(object):
             ttk.Label(child_wnd, text=f'{i+1}    {acc[0]}  {acc[1]}').place(x=x, y=y)
             y += yadd
 
-    def on_click(self, event: tk.Event):
+    def start_end(self, event: tk.Event):
         btn = event.widget
         state = str(btn['state'])
-        if state == tk.DISABLED:
+        if state != tk.NORMAL:
             return
 
         btn['state'] = tk.DISABLED
+        btn_pause_end = self.root.children['!frame'].children['!button2']
         if btn['text'] == 'start':
-            self.m_init()
-            [i.start() for i in self.simulators]
+            self.start_process()
             btn['image'] = 'end'
             btn['text'] = 'end'
+            btn_pause_end['state'] = tk.NORMAL
         else:
-            self._stop.set()
+            self.stop_process()
             btn['image'] = 'start'
             btn['text'] = 'start'
+            btn_pause_end['image'] = 'ipause'
+            btn_pause_end['text'] = 'pause'
+            btn_pause_end['state'] = tk.DISABLED
+        btn['state'] = tk.NORMAL
+
+    def pause_resume(self, event: tk.Event):
+        btn = event.widget
+        state = str(btn['state'])
+        if state != tk.NORMAL:
+            return
+
+        btn['state'] = tk.DISABLED
+        if btn['text'] == 'pause':
+            self.resume_process()
+            btn['image'] = 'start'
+            btn['text'] = 'resume'
+        else:
+            self.pause_process()
+            btn['image'] = 'ipause'
+            btn['text'] = 'pause'
         btn['state'] = tk.NORMAL
 
     def config_modify(self, event: tk.Event, table: ttk.Treeview, ki: ttk.Entry, vi: ttk.Entry):
@@ -396,12 +422,18 @@ class KaraUi(object):
         self.root.clipboard_append(string=pos)
         message('copy position successful')
 
-    def current_tasks(self) -> list:
+    def current_task_serial(self) -> int:
         picker = self.root.children['!frame'].children['!combopicker']
-        func = []
-        for t in picker.current_value.split(','):
-            func.append(self.tasks[t])
-        return func
+        serial = []
+        task_names = list(self.tasks.keys())
+        if not picker.current_value:    # default
+            [serial.append('1') for _ in range(len(self.tasks))]
+            [serial.append('0') for _ in range(max_task_num - len(self.tasks))]
+        else:   # custom task serial
+            selected = picker.current_value.split(',')
+            for each in task_names:
+                serial.append('1' if each in selected else '0')
+        return int('0b' + ''.join(serial), base=2)
 
     @staticmethod
     def switch_local_adb():
@@ -412,6 +444,94 @@ class KaraUi(object):
         simulator_path = conf.get('kara', 'simulator.path')
         DEFAULT_ADB_PATH['Windows'] = os.path.normpath(simulator_path + 'airadb/adb.exe')
         message('switch adb to ' + DEFAULT_ADB_PATH['Windows'])
+
+    def start_process(self):
+        # num = len(self.simulators)
+        # status = [sml.is_alive() for sml in self.simulators]
+        # if status.count(False) == num:
+        #     [sml.start() for sml in self.simulators]
+        # elif status.count(True) != num:
+        #     self.abnormal_state()
+        def not_alive_func():
+            [sml.start() for sml in self.simulators]
+
+        def alive_func():
+            message('process already start')
+
+        self.operate_process(not_alive_func, alive_func)
+
+    def resume_process(self):
+        # num = len(self.simulators)
+        # status = [sml.is_alive() for sml in self.simulators]
+        # if status.count(False) == num:
+        #     message('please start process first')
+        # elif status.count(True) == num:
+        #     if not self._not_pause.is_set():
+        #         self._not_pause.set()
+        # else:
+        #     self.abnormal_state()
+        def not_alive_func():
+            message('please start process first')
+
+        def alive_func():
+            if not self._not_pause.is_set():
+                self._not_pause.set()
+
+        self.operate_process(not_alive_func, alive_func)
+
+    def stop_process(self):
+        # num = len(self.simulators)
+        # status = [sml.is_alive() for sml in self.simulators]
+        # if status.count(False) == num:
+        #     message('please start process first')
+        # elif status.count(True) == num:
+        #     if self._not_stop.is_set():
+        #         self._not_stop.clear()
+        # else:
+        #     self.abnormal_state()
+        def not_alive_func():
+            message('please start process first')
+
+        def alive_func():
+            if self._not_stop.is_set():
+                self._not_stop.clear()
+
+        self.operate_process(not_alive_func, alive_func)
+
+    def pause_process(self):
+        # num = len(self.simulators)
+        # status = [sml.is_alive() for sml in self.simulators]
+        # if status.count(False) == num:
+        #     message('please start process first')
+        # elif status.count(True) == num:
+        #     if self._not_pause.is_set():
+        #         self._not_pause.clear()
+        # else:
+        #     self.abnormal_state()
+        def not_alive_func():
+            message('please start process first')
+
+        def alive_func():
+            if self._not_pause.is_set():
+                self._not_pause.clear()
+
+        self.operate_process(not_alive_func, alive_func)
+
+    def operate_process(self, not_alive_func, alive_func):
+        num = len(self.simulators)
+        status = [sml.is_alive() for sml in self.simulators]
+        if status.count(False) == num:
+            not_alive_func()
+        elif status.count(True) == num:
+            alive_func()
+        else:
+            self.abnormal_state()
+
+    @staticmethod
+    def abnormal_state():
+        err = 'abnormal process state, please restart the program'
+        message(err)
+        raise RuntimeError(err)
 
 
 if __name__ == '__main__':

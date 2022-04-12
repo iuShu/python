@@ -20,5 +20,4 @@ capture_file = normpath(temp_dir + '/capture.png')
 log_file = ''
 elv_file = ''
 
-PROC_INIT = 0
-PROC_NORMAL = 8
+max_task_num = 32

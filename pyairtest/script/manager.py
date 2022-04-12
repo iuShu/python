@@ -6,7 +6,6 @@ from airtest.core.android.adb import ADB
 from script.config import conf
 from script.simulator import Simulator
 from utils import execmd, error
-from constants import PROC_INIT
 
 manager_adb = None
 
@@ -30,11 +29,13 @@ def initialize() -> tuple:
     try:
         simulators = []
         mng = Manager()
-        sync = mng.Array('i', [PROC_INIT] * 4)
+        sync = mng.Array('i', [0] * 4)
         _indicator = mng.Array('i', [0] * 4)
-        _pause = mng.Event()
-        _stop = mng.Event()
-        args = [[], '', sync, _indicator, _pause, _stop]
+        _not_pause = mng.Event()
+        _not_stop = mng.Event()
+        _not_pause.set()
+        _not_stop.set()
+        args = [[], '', sync, _indicator, _not_pause, _not_stop]
         for i in range(len(devs)):
             info = lines[i].split(',')
             args[0] = info[:4]
@@ -42,7 +43,7 @@ def initialize() -> tuple:
             simulator = Simulator(*args)
             simulators.append(simulator)
         _layout(simulators)
-        return simulators, _indicator, _pause, _stop
+        return simulators, _indicator, _not_pause, _not_stop
     except RuntimeError:
         error('initialize simulator error')
 
