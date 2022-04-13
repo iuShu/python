@@ -20,4 +20,4 @@ capture_file = normpath(temp_dir + '/capture.png')
 log_file = ''
 elv_file = ''
 
-max_task_num = 32
+max_task_num = 31

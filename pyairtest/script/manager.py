@@ -33,14 +33,15 @@ def initialize() -> tuple:
         _indicator = mng.Array('i', [0] * 4)
         _not_pause = mng.Event()
         _not_stop = mng.Event()
-        _not_pause.set()
-        _not_stop.set()
-        args = [[], '', sync, _indicator, _not_pause, _not_stop]
+        # _not_pause.set()
+        # _not_stop.set()
+        args = [-1, '', -1, -1, '', sync, _indicator, _not_pause, _not_stop]
         for i in range(len(devs)):
             info = lines[i].split(',')
             args[0] = info[:4]
             args[1] = devs[i][0]
             simulator = Simulator(*args)
+            simulator.start()
             simulators.append(simulator)
         _layout(simulators)
         return simulators, _indicator, _not_pause, _not_stop
@@ -79,5 +80,5 @@ def _layout(simulators: list):
 
 
 if __name__ == '__main__':
-
+    initialize()
     pass

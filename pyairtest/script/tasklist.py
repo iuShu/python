@@ -4,14 +4,18 @@ from airtest.core.android import Android
 
 
 def tasks():
-    return {
-        'open_kara': open_kara,
-        'login': login,
-        'recognize_energy': recognize_energy,
-        'recognize_level': recognize_level,
-        'pvp_match': pvp_match,
-        'logout': logout,
-    }
+    # return {
+    #     'open_kara': open_kara,
+    #     'login': login,
+    #     'recognize_energy': recognize_energy,
+    #     'recognize_level': recognize_level,
+    #     'pvp_match': pvp_match,
+    #     'logout': logout,
+    # }
+    fake = dict()
+    for i in range(10):
+        fake[f'switch-{i}'] = open_kara
+    return fake
 
 
 def open_kara(sml):

@@ -21,7 +21,7 @@ class KaraUi(object):
         self.root = None
         self.table = None
 
-        self.simulators = []
+        self.simulators = None
         self._indicator = None
         self._not_pause = None
         self._not_stop = None
@@ -126,19 +126,19 @@ class KaraUi(object):
         #     self.table.delete(i)
         try:
             self.switch_local_adb()
-            simulators, i, np, ns = manager.initialize()
+            simulators, idc, np, ns = manager.initialize()
         except RuntimeError as re:
             message(re.__str__())
             return
 
         serial = self.current_task_serial()
         for simulator in simulators:
-            self._indicator[simulator.idx] = serial     # assign task serial
+            idc[simulator.idx] = serial     # assign task serial
             rid = self.table.insert('', tk.END, values=[simulator.name, 'ready', '', 'init'])
             # simulator.add_tasks(func)
             # inst.bind_ui(rid, self.root)
 
-        self._indicator = i
+        self._indicator = idc
         self._not_stop = ns
         self._not_pause = np
         self.simulators = simulators
@@ -426,13 +426,14 @@ class KaraUi(object):
         picker = self.root.children['!frame'].children['!combopicker']
         serial = []
         task_names = list(self.tasks.keys())
-        if not picker.current_value:    # default
+        if not picker.current_value:    # default full task serial
             [serial.append('1') for _ in range(len(self.tasks))]
             [serial.append('0') for _ in range(max_task_num - len(self.tasks))]
-        else:   # custom task serial
+        else:                           # custom task serial
             selected = picker.current_value.split(',')
             for each in task_names:
                 serial.append('1' if each in selected else '0')
+        [serial.append('0') for _ in range(max_task_num - len(serial))]
         return int('0b' + ''.join(serial), base=2)
 
     @staticmethod
@@ -450,26 +451,27 @@ class KaraUi(object):
         # status = [sml.is_alive() for sml in self.simulators]
         # if status.count(False) == num:
         #     [sml.start() for sml in self.simulators]
-        # elif status.count(True) != num:
+        # elif status.count(True) == num:
+        #     serial = self.current_task_serial()
+        #     for sml in self.simulators:
+        #         self._indicator[sml.idx] = serial
+        #     self._not_pause.set()
+        #     self._not_stop.set()
+        # else:
         #     self.abnormal_state()
         def not_alive_func():
             [sml.start() for sml in self.simulators]
 
         def alive_func():
-            message('process already start')
+            serial = self.current_task_serial()
+            for sml in self.simulators:
+                self._indicator[sml.idx] = serial
+            self._not_pause.set()
+            self._not_stop.set()
 
         self.operate_process(not_alive_func, alive_func)
 
     def resume_process(self):
-        # num = len(self.simulators)
-        # status = [sml.is_alive() for sml in self.simulators]
-        # if status.count(False) == num:
-        #     message('please start process first')
-        # elif status.count(True) == num:
-        #     if not self._not_pause.is_set():
-        #         self._not_pause.set()
-        # else:
-        #     self.abnormal_state()
         def not_alive_func():
             message('please start process first')
 
@@ -480,34 +482,17 @@ class KaraUi(object):
         self.operate_process(not_alive_func, alive_func)
 
     def stop_process(self):
-        # num = len(self.simulators)
-        # status = [sml.is_alive() for sml in self.simulators]
-        # if status.count(False) == num:
-        #     message('please start process first')
-        # elif status.count(True) == num:
-        #     if self._not_stop.is_set():
-        #         self._not_stop.clear()
-        # else:
-        #     self.abnormal_state()
         def not_alive_func():
             message('please start process first')
 
         def alive_func():
+            self._not_pause.set()
             if self._not_stop.is_set():
                 self._not_stop.clear()
 
         self.operate_process(not_alive_func, alive_func)
 
     def pause_process(self):
-        # num = len(self.simulators)
-        # status = [sml.is_alive() for sml in self.simulators]
-        # if status.count(False) == num:
-        #     message('please start process first')
-        # elif status.count(True) == num:
-        #     if self._not_pause.is_set():
-        #         self._not_pause.clear()
-        # else:
-        #     self.abnormal_state()
         def not_alive_func():
             message('please start process first')
 
