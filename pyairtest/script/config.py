@@ -33,6 +33,11 @@ class ConfigContext(object):
         val = self.get(name, key)
         return int(val) if val else 0
 
+    def getpos(self, name: str, key: str) -> tuple:
+        val = self.get(name, key)
+        if val:
+            return tuple(map(int, val))
+
     def getall(self, name: str) -> dict:
         cfg = self._repo.get(name)
         return cfg.props if cfg else None

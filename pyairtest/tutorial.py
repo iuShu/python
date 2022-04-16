@@ -38,7 +38,7 @@ def check_energy():
 def max_level():
     dev = init_device('Android')
     screen = dev.snapshot(filename=None, quality=ST.SNAPSHOT_QUALITY)
-    lt, rb = (258, 117), (300, 138)  # energy area position
+    lt, rb = (258, 117), (300, 138)  # level area position
     roi = screen[lt[1]:rb[1], lt[0]:rb[0]]
     level = textocr.recognize(roi)
     print(level)

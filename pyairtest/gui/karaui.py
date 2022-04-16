@@ -280,11 +280,11 @@ class KaraUi(object):
 
         btn['state'] = tk.DISABLED
         if btn['text'] == 'pause':
-            self.resume_process()
+            self.pause_process()
             btn['image'] = 'start'
             btn['text'] = 'resume'
         else:
-            self.pause_process()
+            self.resume_process()
             btn['image'] = 'ipause'
             btn['text'] = 'pause'
         btn['state'] = tk.NORMAL
@@ -447,20 +447,8 @@ class KaraUi(object):
         message('switch adb to ' + DEFAULT_ADB_PATH['Windows'])
 
     def start_process(self):
-        # num = len(self.simulators)
-        # status = [sml.is_alive() for sml in self.simulators]
-        # if status.count(False) == num:
-        #     [sml.start() for sml in self.simulators]
-        # elif status.count(True) == num:
-        #     serial = self.current_task_serial()
-        #     for sml in self.simulators:
-        #         self._indicator[sml.idx] = serial
-        #     self._not_pause.set()
-        #     self._not_stop.set()
-        # else:
-        #     self.abnormal_state()
         def not_alive_func():
-            [sml.start() for sml in self.simulators]
+            message('Illegal process state')
 
         def alive_func():
             serial = self.current_task_serial()

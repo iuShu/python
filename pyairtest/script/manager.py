@@ -1,7 +1,6 @@
-from multiprocessing import Manager
+from multiprocessing import Manager, Barrier
 import win32gui
 import win32con
-from airtest.core.android import Android
 from airtest.core.android.adb import ADB
 from script.config import conf
 from script.simulator import Simulator
@@ -23,28 +22,31 @@ def initialize() -> tuple:
     global manager_adb
     manager_adb = ADB() if not manager_adb else manager_adb
     devs = manager_adb.devices(state="device")
+    num = len(devs)
     if len(devs) != len(lines):
         error('simulator devices info mismatched')
 
     try:
         simulators = []
         mng = Manager()
-        sync = mng.Array('i', [0] * 4)
-        _indicator = mng.Array('i', [0] * 4)
-        _not_pause = mng.Event()
-        _not_stop = mng.Event()
-        # _not_pause.set()
+        indicator = mng.Array('i', [0] * num)
+        not_pause = mng.Event()
+        not_stop = mng.Event()
+        not_pause.set()
         # _not_stop.set()
-        args = [-1, '', -1, -1, '', sync, _indicator, _not_pause, _not_stop]
+        _sync_action = Barrier(parties=num)
+        _sync_data = mng.Array('i', [0] * num)
+        args = [-1, '', -1, -1, '', indicator, not_pause, not_stop, _sync_action, _sync_data]
         for i in range(len(devs)):
             info = lines[i].split(',')
-            args[0] = info[:4]
-            args[1] = devs[i][0]
+            args[0] = i
+            args[1:4] = info[1:4]
+            args[4] = devs[i][0]
             simulator = Simulator(*args)
             simulator.start()
             simulators.append(simulator)
         _layout(simulators)
-        return simulators, _indicator, _not_pause, _not_stop
+        return simulators, indicator, not_pause, not_stop
     except RuntimeError:
         error('initialize simulator error')
 
@@ -69,14 +71,6 @@ def _layout(simulators: list):
             idx += 1
         fy += dh
         fx = 0
-
-    ww = conf.getint('kara', 'window.width')
-    wh = conf.getint('kara', 'window.height')
-    for simulator in simulators:
-        dev: Android = simulator.dev
-        resolution = dev.get_current_resolution()
-        if ww != resolution[0] or wh != resolution[1]:
-            error('please confirm collapse the rightside toolbar and change resolution to 960 x 540')
 
 
 if __name__ == '__main__':
