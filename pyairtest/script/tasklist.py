@@ -1,12 +1,13 @@
 import time
+import traceback
 
 import win
-import utils
 import textocr
 
 from airtest.core.android import Android
 from script.config import conf
 from constants import *
+from utils import only_numeric, tmatch
 
 
 def tasks() -> dict:
@@ -15,7 +16,6 @@ def tasks() -> dict:
         'login': login,
         'recognize_energy': recognize_energy,
         'recognize_level': recognize_level,
-        'sync_level': sync_level,
         'pvp_match': pvp_match,
         'logout': logout,
     }
@@ -37,87 +37,105 @@ def fake_tasks() -> dict:
 
 
 def open_kara(sml):
-    match_pos = sml.match(t_kara)
-    if not match_pos:
-        sml.back_last()     # fire stop
+    rec = sml.match(t_kara)
+    if not rec:
+        sml.backward()     # fire stop
+        sml.log('cannot found kara app')
         return
 
-    sml.click(match_pos)
+    sml.click(center(rec))
+    sml.log('app loading')
     cooldown('apk.startup')
-
-    times = conf.getint('kara', 'startup.match')
+    times = conf.getint('kara', 'startup.match.times')
     for _ in range(times):
         sml.click(pos('email.button'))
-        cooldown('half.second')
+        cooldown(seconds=.5)
         if sml.match(t_close):
             break
 
 
 def login(sml):
+    if not sml.match(t_close):      # for single execute
+        sml.click(pos('email.button'))
+        cooldown()
+
+    sml.log('obtain account')
     acc = sml.obtain_account()
     if not acc:
+        sml.log('no account, stop all')
         sml.not_stop.clear()
         return
 
+    sml.log('account', acc[0])
     sml.click(pos('email.input'))
+    cooldown()
     win.cpress(sml.hwnd, 'lcontrol,a')
     win.press(sml.hwnd, 'delete')
     win.typing(sml.hwnd, acc[0])
+    win.press(sml.hwnd, 'return')
     cooldown()
     sml.click(pos('password.input'))
+    cooldown()
     win.cpress(sml.hwnd, 'lcontrol,a')
     win.press(sml.hwnd, 'delete')
     win.typing(sml.hwnd, acc[1])
+    win.press(sml.hwnd, 'return')
     cooldown()
     sml.click(pos('login.button'))
+    sml.log('login')
     cooldown('login.wait')
 
     times = conf.getint('kara', 'login.loading.times')
     ret = sml.wait(t_main, timeout=times)
     if not ret:
-        sml.back_last(0)     # log in failed, switch account
+        sml.log('login failed')
+        sml.backward(0)     # login failed, switch account
 
 
 def recognize_energy(sml):
+    sml.log('recognize energy')
     screen = sml.snapshot()
     elt, erb = pos('energy.lt'), pos('energy.rb')
     roi = screen[elt[1]:erb[1], elt[0]:erb[0]]
     try:
         reg = textocr.recognize(roi)
-        energy = int(reg.removesuffix('20'))
+        energy = int(only_numeric(reg).removesuffix('20'))
+        sml.log('energy', energy)
         if energy < 1:
-            sml.back_last()  # back to log in
+            sml.forward(3)      # logout and re-login
         else:
             sml.energy = energy
-    except Exception:
-        print(sml.name, sml.pid, 'energy recognize error')
-        sml.back_last()
+    except Exception as e:
+        sml.log('energy recognize error', e.__str__())
+        sml.forward(3)          # logout and re-login
 
 
 def recognize_level(sml):
+    sml.log('recognize level')
     sml.click(pos('role.button'))
-    cooldown('panel.open')
+    sml.wait(t_role)
+    sml.log('entered role panel')
     screen = sml.snapshot()
     llt, lrb = pos('role.lv.lt'), pos('role.lv.rb')
     try:
         roi = screen[llt[1]:lrb[1], llt[0]:lrb[0]]
-        level = int(textocr.recognize(roi))
+        reg = textocr.recognize(roi)
+        level = int(only_numeric(reg))
+        sml.log('level', level)
         sml.level = level
         sml.click(pos('back'))
+        _sync_level(sml)
         cooldown()
-    except Exception:
-        print(sml.name, sml.pid, 'level recognize error')
-        sml.back_last(2)    # back to log in
+    except Exception as e:
+        sml.log('level recognize error', e.__str__())
+        sml.forward(2)
 
 
-def sync_level(sml):
-    if sml.level == 0:
-        sml.not_stop.clear()    # prevent single task
-        return
-
-    if not sml.desired:
+def _sync_level(sml):
+    if sml.desired:
+        sml.log('desired', sml.desired)
         if sml.desired != get_scene(sml.level):
-            sml.back_last(3)
+            sml.backward(2)
             return
         sml.desired = None
         return              # to next task
@@ -126,20 +144,20 @@ def sync_level(sml):
     if not max_level:       # sync failed
         return
 
+    sml.log('max level', max_level)
     if sml.level == max_level:
         return              # to next task
 
     scene, self_scene = get_scene(max_level), get_scene(sml.level)
     if scene != self_scene:
         sml.desired = scene
-        sml.back_last(3)    # back to log in
+        sml.forward(2)      # logout and re-login
         return
 
 
 def pvp_match(sml):
-    cooldown()
+    sml.log('enter arena')
     sml.click(pos('arena.button'))
-    cooldown()
     sml.wait(t_bf)
     cooldown()
 
@@ -149,6 +167,8 @@ def pvp_match(sml):
     cancel_pos = pos('arena.match.cancel.button')
     match_counter = 1
     max_try = conf.getint('kara', 'arena.match.try.times')
+
+    sml.log('pvp match ready')
     ready = sml.sync_action()
     if not ready:           # sync failed
         return
@@ -158,68 +178,79 @@ def pvp_match(sml):
     cooldown(seconds=.4)
     while sml.is_running():
         screen = sml.snapshot()
-        lt, rb = utils.tmatch(screen, t_who)
+        lt, rb = tmatch(screen, t_who)
         if lt[0] != slt[0] or lt[1] != slt[1]:
             break
         cooldown(seconds=.1)
 
     while sml.is_running() and max_try > sml.pvp_sync(match_counter, False):
         screen = sml.snapshot()
-        lt, rb = utils.tmatch(screen, t_cancel)
+        lt, rb = tmatch(screen, t_cancel)
         if lt[0] != clt[0] or lt[1] != clt[1]:
             sml.pvp_sync(match_counter, True)
+            sml.log('matched at', match_counter)
             _battle(sml)
             return
         match_counter += 1
 
     sml.click(cancel_pos)
-    cooldown(seconds=.5)
+    cooldown(seconds=.3)
     sml.click(cancel_pos)
-    cooldown(seconds=.5)
+    sml.log('try cancel', match_counter)
+    cooldown()
     while sml.is_running():
         if sml.match(t_bf):
-            print(sml.name, sml.pid, 'cancel ok')
+            sml.log('cancel ok')
             sml.click(pos('back'))
             cooldown()
-            sml.back_last(0)    # re-enter arena
+            sml.backward(0)    # re-enter arena
             return
         elif sml.match(t_squirrel):
-            print(sml.name, sml.pid, 'cancel failed')
+            sml.log('cancel failed')
             _battle(sml)
             return
         cooldown(seconds=.5)
 
 
-def _battle(sml):   # not in the task list, pvp_match() inner only
-    print(sml.name, sml.pid, 'pvp loading')
+def _battle(sml):
+    sml.log('pvp loading')
     times = conf.getint('kara', 'battle.loading.times')
     sml.wait(t_squirrel, timeout=times)
-    print(sml.name, sml.pid, 'start battle')
+    sml.log('start battle')
     sml.click(pos('arena.battle.setting'))
     cooldown()
     sml.click(pos('arena.battle.surrender'))
     cooldown()
-    print(sml.name, sml.pid, 'surrender')
-    sml.back_last(0)
+    sml.log('surrendered')
+    sml.backward(0)
 
 
 def logout(sml):
     if not sml.match(t_main):
-        print(sml.name, sml.pid, 'not in home page')
+        sml.log('logout failed: not in home page')
         return
 
     sml.click(pos('setting.button'))
     cooldown('panel.open')
     sml.click(pos('logout.button'))
-    sml.back_last(5)    # back to log in
+    sml.log('log out')
+    sml.backward(5)    # back to log in
 
 
 def cooldown(key: str = 'one.second', seconds: float = 0):
     if seconds:
         time.sleep(seconds)
     else:
-        time.sleep(conf.getint(key + '.cooldown') / 1000)
+        time.sleep(conf.getint('kara', key + '.cooldown') / 1000)
 
 
 def pos(key: str) -> tuple:
     return conf.getpos('kara', key + '.pos')
+
+
+def center(rec) -> tuple:
+    lt, rb = rec[0], rec[1]
+    x = lt[0] + ((rb[0]-lt[0])//2)
+    y = lt[1] + ((rb[1]-lt[1])//2)
+    return x, y
+

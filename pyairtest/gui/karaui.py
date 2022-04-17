@@ -1,9 +1,11 @@
 import os
+import threading
+import time
 import tkinter as tk
 from tkinter.messagebox import askyesno
 from tkinter import ttk, Tk, PhotoImage
+from datetime import datetime
 
-import cv2 as cv
 import textocr
 from constants import *
 from gui.multicombox import Combopicker
@@ -11,6 +13,7 @@ from script.config import conf
 from script.tasklist import tasks
 from script import manager
 from utils import message, show, try_do
+from airtest.core.android.adb import cleanup_adb_forward
 
 # from kara.logger import LOG_DIR
 
@@ -25,6 +28,7 @@ class KaraUi(object):
         self._indicator = None
         self._not_pause = None
         self._not_stop = None
+        self.log_queue = None
 
         self.tasks = tasks()
         self.flow_confirm = True
@@ -114,6 +118,7 @@ class KaraUi(object):
     def win_exit(self):
         # [s.cleanup() for s in self.simulators]
         # manager.cleanup()
+        cleanup_adb_forward()
         try_do(lambda: self.capture_wnd.destroy())
         self.root.destroy()
 
@@ -126,7 +131,7 @@ class KaraUi(object):
         #     self.table.delete(i)
         try:
             self.switch_local_adb()
-            simulators, idc, np, ns = manager.initialize()
+            simulators, idc, np, ns, lq = manager.initialize()
         except RuntimeError as re:
             message(re.__str__())
             return
@@ -141,10 +146,13 @@ class KaraUi(object):
         self._indicator = idc
         self._not_stop = ns
         self._not_pause = np
+        self.log_queue = lq
         self.simulators = simulators
 
         btn_start_end = self.root.children['!frame'].children['!button']
         btn_start_end['state'] = tk.NORMAL
+        self.sync_widget()
+        self.fire_logging()
 
     def m_capture(self):
         if not self.simulators:
@@ -257,19 +265,19 @@ class KaraUi(object):
             return
 
         btn['state'] = tk.DISABLED
-        btn_pause_end = self.root.children['!frame'].children['!button2']
+        btn_pause_resume = self.root.children['!frame'].children['!button2']
         if btn['text'] == 'start':
             self.start_process()
             btn['image'] = 'end'
             btn['text'] = 'end'
-            btn_pause_end['state'] = tk.NORMAL
+            btn_pause_resume['state'] = tk.NORMAL
         else:
             self.stop_process()
             btn['image'] = 'start'
             btn['text'] = 'start'
-            btn_pause_end['image'] = 'ipause'
-            btn_pause_end['text'] = 'pause'
-            btn_pause_end['state'] = tk.DISABLED
+            btn_pause_resume['image'] = 'ipause'
+            btn_pause_resume['text'] = 'pause'
+            btn_pause_resume['state'] = tk.DISABLED
         btn['state'] = tk.NORMAL
 
     def pause_resume(self, event: tk.Event):
@@ -368,7 +376,7 @@ class KaraUi(object):
         res = ''
         try:
             res = textocr.recognize(cv.imread(tesseract_sample))
-            if res == '05:59:55':
+            if res == '18':
                 message('tesseract ok')
         except Exception:
             message('error occurred during tesseract testing', res)
@@ -505,6 +513,42 @@ class KaraUi(object):
         err = 'abnormal process state, please restart the program'
         message(err)
         raise RuntimeError(err)
+
+    def sync_widget(self):
+        def sync():
+            btn_start_stop = self.root.children['!frame'].children['!button']
+            btn_pause_resume = self.root.children['!frame'].children['!button2']
+            while True:
+                if not self._not_stop.is_set():
+                    btn_start_stop['image'] = 'start'
+                    btn_start_stop['text'] = 'start'
+                    btn_start_stop['state'] = tk.NORMAL
+                    btn_pause_resume['image'] = 'ipause'
+                    btn_pause_resume['text'] = 'pause'
+                    btn_pause_resume['state'] = tk.DISABLED
+                elif not self._not_pause.is_set():
+                    btn_pause_resume['image'] = 'start'
+                    btn_pause_resume['text'] = 'resume'
+                time.sleep(.3)
+        th = threading.Thread(target=sync, args=[])
+        th.setDaemon(True)
+        th.start()
+
+    def fire_logging(self):
+        def logging():
+            with open(filepath, 'a') as f:
+                while True:
+                    batch = []
+                    while not self.log_queue.empty():
+                        batch.append(self.log_queue.get_nowait())
+                    f.writelines(batch)
+                    f.flush()
+                    time.sleep(.3)
+        filename = datetime.strftime(datetime.today(), '%Y%m%d%H%M%S') + '.log'
+        filepath = f'{res_dir}/{filename}'
+        th = threading.Thread(target=logging, args=[])
+        th.setDaemon(True)
+        th.start()
 
 
 if __name__ == '__main__':

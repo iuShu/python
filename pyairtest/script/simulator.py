@@ -1,6 +1,8 @@
 import time
+import traceback
 
 import numpy as np
+from constants import max_task_num
 
 from script.tasklist import tasks as all_tasks
 from airtest.core.api import init_device
@@ -15,7 +17,7 @@ FIND_INTERVAL = .5
 class Simulator(Process):
 
     def __init__(self, idx, name, handle, hwnd, serialno,
-                 indicator, not_pause, not_stop, _sync_action, _sync_data, _acc_queue):
+                 indicator, not_pause, not_stop, _sync_action, _sync_data, _acc_queue, log_queue):
         super().__init__(daemon=True)
         self.idx = idx
         self.name = name
@@ -31,6 +33,7 @@ class Simulator(Process):
         self._sync_action = _sync_action    # Barrier
         self._sync_data = _sync_data        # Manager.Array
         self._acc_queue = _acc_queue        # Manager.Queue
+        self.log_queue = log_queue          # Manager.Queue
         self.desired = None
 
         self.progress = 0
@@ -46,38 +49,40 @@ class Simulator(Process):
         self.dev = init_device(uuid=self.serialno)
         if self.dev:
             self.dev.snapshot()     # preheating
-            print(self.name, self.pid, 'device prepared')
+            self.log('device prepared')
             return
         raise RuntimeError(self.name, self.pid, 'init device error')
 
     def snapshot(self) -> np.ndarray:
         return self.dev.screen_proxy.snapshot()
 
-    def match(self, template: Template) -> tuple:
-        match_pos = template.match_in(self.snapshot())
-        if match_pos:
-            return match_pos
-        return ()
-
     def click(self, pos: tuple):
         self.dev.touch(pos)
 
+    def match(self, template: Template) -> tuple:
+        ret = template._cv_match(self.snapshot())
+        if ret:
+            rec = ret['rectangle']
+            return rec[0], rec[2]
+        return ()
+
     def wait(self, template: Template, timeout=FIND_TIMEOUT, interval=FIND_INTERVAL) -> tuple:
-        print(self.name, self.pid, 'finding', template)
+        self.log('finding', template)
         start_time = time.time()
         while self.is_running():
-            screen = self.snapshot()
-            match_pos = template.match_in(screen)
-            if match_pos:
-                print(self.name, self.pid, 'found', template, 'cost', time.time() - start_time)
-                return match_pos
+            rec = self.match(template)
+            if rec:
+                self.log('found', template, 'cost', time.time() - start_time)
+                return rec
 
             if (time.time() - start_time) > timeout:
-                print(self.name, self.pid, 'cannot found', template)
+                self.log('cannot found', template)
                 return ()
             time.sleep(interval)
 
     def obtain_account(self) -> tuple:
+        if self._acc_queue.empty():
+            return ()
         acc = self._acc_queue.get_nowait()
         return acc if acc else ()
 
@@ -90,12 +95,19 @@ class Simulator(Process):
     def is_running(self) -> bool:
         return self.not_stop.is_set()
 
+    def log(self, *args):
+        joined = ' '.join(tuple(map(str, args)))
+        now = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        msg = f'[{now}] {self.pid} {self.name} {joined}\n'
+        self.log_queue.put_nowait(msg)
+        print(msg)
+
     def stop(self):     # stop all processes
         self.not_stop.clear()
         self.not_pause.set()
         self._sync_action.abort()
         self._sync_data[self.idx] = 0
-        print(self.name, self.pid, 'stop at progress', self.task_name())
+        self.log('stop at progress', self.task_name())
 
     def reset(self):
         self.progress = 0
@@ -106,7 +118,22 @@ class Simulator(Process):
         self.level = 0
         self.arena_counter = 0
 
-    def back_last(self, num: int = 1):
+    def forward(self, num: int = 1):
+        fore_progress = self.progress + num
+        if fore_progress >= self.total:
+            self.stop()
+            return
+
+        task_serial = self.indicator[self.idx]
+        if not has_task(fore_progress, task_serial):
+            self.stop()
+            return
+
+        steps = num - 1
+        self.log('fore to progress', self.task_name(self.progress + num))
+        self.progress += steps
+
+    def backward(self, num: int = 1):
         prev_progress = self.progress - num
         if prev_progress < 0:
             self.stop()
@@ -118,7 +145,7 @@ class Simulator(Process):
             return
 
         steps = num + 1
-        print(self.name, self.pid, 'back to progress', self.task_name(self.progress - num))
+        self.log('back to progress', self.task_name(self.progress - num))
         if self.progress < steps:
             self.progress = -1
         else:
@@ -128,9 +155,8 @@ class Simulator(Process):
         try:
             task(self)
             return True
-        except Exception as ex:
-            print(self.name, 'execute task error:', ex.__str__)
-            self.not_stop.clear()
+        except Exception:
+            self.log('execute task error:', traceback.format_exc())
             return False
 
     def sync_action(self) -> bool:
@@ -139,13 +165,13 @@ class Simulator(Process):
             self._sync_action.reset()
             return True
         except Exception:
-            print(self.name, self.idx, 'sync action failed at', self.task_name())
+            self.log(self.name, self.idx, 'sync action failed at', self.task_name())
             self.not_stop.clear()
             return False
 
     def sync_data(self, val: int) -> int:
         self._sync_data[self.idx] = val
-        print(self.name, self.pid, 'sync with value', val)
+        self.log('sync with value', val)
         try:
             self._sync_action.wait()
             max_val = max(self._sync_data[self.idx])
@@ -153,7 +179,7 @@ class Simulator(Process):
             self._sync_action.reset()
             return max_val
         except Exception:
-            print(self.name, self.pid, 'sync data failed at', self.task_name())
+            self.log('sync data failed at', self.task_name())
             self.not_stop.clear()
             return -1
 
@@ -170,7 +196,7 @@ class Simulator(Process):
         self._sync_data[-1] = 0
 
     def run(self) -> None:
-        print(self.name, self.pid, 'start')
+        self.log('start')
         self.prepare()
         while True:
             if not self.is_running():
@@ -185,11 +211,12 @@ class Simulator(Process):
             if has_task(self.progress, task_serial):
                 task = self.tasks[self.progress]
                 if not self.execute(task):
-                    break
+                    self.not_stop.clear()
+                    continue
 
             self.progress += 1
             if self.progress > self.total:
-                print(self.name, 'finished round')
+                self.log('finished round')
                 self.stop()
 
             time.sleep(EXECUTE_INTERVAL)
@@ -203,6 +230,8 @@ def has_task(index: int, task_serial: int) -> bool:
             partial task:   0b0111 0000 0000 ... ... 0000 0000
     """
     serial = bin(task_serial)[2:]
+    if len(serial) != max_task_num:
+        serial = ''.join(['0' for _ in range(max_task_num - len(serial))]) + serial
     return serial[index] == '1'
 
 

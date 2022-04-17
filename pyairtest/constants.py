@@ -25,14 +25,15 @@ elv_file = ''
 
 max_task_num = 31
 
-t_kara = Template('resources/template/kara.png')
-t_email = Template('resources/template/emaddr.png')
-t_main = Template('resources/template/main_flag.png')
-t_bf = Template('resources/template/battlefield_ready.png')
-t_close = Template('resources/template/close.png')
-t_squirrel = Template('resources/template/squirrel.png')
-t_who = cv.imread('resources/template/who.png')
-t_cancel = cv.imread('resources/template/cancel.png')
+t_kara = Template(template_dir + '/kara.png')
+t_email = Template(template_dir + '/emaddr.png')
+t_main = Template(template_dir + '/main_flag.png')
+t_role = Template(template_dir + '/mykaras.png')
+t_bf = Template(template_dir + '/battlefield_ready.png')
+t_close = Template(template_dir + '/close.png')
+t_squirrel = Template(template_dir + '/squirrel.png')
+t_who = cv.imread(template_dir + '/who.png')
+t_cancel = cv.imread(template_dir + '/cancel.png')
 
 
 ARENA_GENERAL = {

@@ -33,11 +33,11 @@ def initialize() -> tuple:
         not_pause = mng.Event()
         not_stop = mng.Event()
         not_pause.set()
-        # _not_stop.set()
         _sync_action = Barrier(parties=num)
         _sync_data = mng.Array('i', [0] * (num + 1))
         _acc_queue = _accounts(mng)
-        args = [-1, '', -1, -1, '', indicator, not_pause, not_stop, _sync_action, _sync_data, _acc_queue]
+        log_queue = mng.Queue()
+        args = [-1, '', -1, -1, '', indicator, not_pause, not_stop, _sync_action, _sync_data, _acc_queue, log_queue]
         for i in range(len(devs)):
             info = lines[i].split(',')
             args[0] = i
@@ -47,7 +47,7 @@ def initialize() -> tuple:
             simulator.start()
             simulators.append(simulator)
         _layout(simulators)
-        return simulators, indicator, not_pause, not_stop
+        return simulators, indicator, not_pause, not_stop, log_queue
     except RuntimeError:
         error('initialize simulator error')
 

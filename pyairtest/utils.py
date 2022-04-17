@@ -33,6 +33,11 @@ def show(img, title='snapshot'):
     cv.waitKey(0)
 
 
+def only_numeric(txt: str) -> str:
+    flt = filter(lambda s: s.isnumeric(), txt)
+    return ''.join([f for f in flt])
+
+
 def try_do(task):
     try:
         task()
