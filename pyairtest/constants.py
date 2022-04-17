@@ -1,4 +1,6 @@
 from os.path import dirname, realpath, normpath
+
+import cv2 as cv
 from airtest.core.cv import Template
 
 root_dir = dirname(realpath(__file__))
@@ -28,6 +30,9 @@ t_email = Template('resources/template/emaddr.png')
 t_main = Template('resources/template/main_flag.png')
 t_bf = Template('resources/template/battlefield_ready.png')
 t_close = Template('resources/template/close.png')
+t_squirrel = Template('resources/template/squirrel.png')
+t_who = cv.imread('resources/template/who.png')
+t_cancel = cv.imread('resources/template/cancel.png')
 
 
 ARENA_GENERAL = {

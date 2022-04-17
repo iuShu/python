@@ -25,11 +25,11 @@ class ConfigContext(object):
         for p in self._paths:
             self._repo[config_name(p)] = Configuration(p)
 
-    def get(self, name: str, key: str):
+    def get(self, name: str, key: str) -> str:
         cfg = self._repo.get(name)
         return cfg.props.get(key) if cfg else None
 
-    def getint(self, name: str, key: str):
+    def getint(self, name: str, key: str) -> int:
         val = self.get(name, key)
         return int(val) if val else 0
 

@@ -10,14 +10,12 @@ from multiprocessing import Process
 EXECUTE_INTERVAL = .2
 FIND_TIMEOUT = 20
 FIND_INTERVAL = .5
-SYNC_ACTION_TIMEOUT = 1800
-SYNC_DATA_TIMEOUT = 3600
 
 
 class Simulator(Process):
 
     def __init__(self, idx, name, handle, hwnd, serialno,
-                 indicator, not_pause, not_stop, _sync_action, _sync_data):
+                 indicator, not_pause, not_stop, _sync_action, _sync_data, _acc_queue):
         super().__init__(daemon=True)
         self.idx = idx
         self.name = name
@@ -32,6 +30,7 @@ class Simulator(Process):
         self.not_stop = not_stop            # Manager.Event
         self._sync_action = _sync_action    # Barrier
         self._sync_data = _sync_data        # Manager.Array
+        self._acc_queue = _acc_queue        # Manager.Queue
         self.desired = None
 
         self.progress = 0
@@ -66,7 +65,7 @@ class Simulator(Process):
     def wait(self, template: Template, timeout=FIND_TIMEOUT, interval=FIND_INTERVAL) -> tuple:
         print(self.name, self.pid, 'finding', template)
         start_time = time.time()
-        while self.not_stop.is_set():
+        while self.is_running():
             screen = self.snapshot()
             match_pos = template.match_in(screen)
             if match_pos:
@@ -78,8 +77,9 @@ class Simulator(Process):
                 return ()
             time.sleep(interval)
 
-    def typing(self, keys: str):
-        pass
+    def obtain_account(self) -> tuple:
+        acc = self._acc_queue.get_nowait()
+        return acc if acc else ()
 
     def set_indicator(self, task_serial):
         self.indicator[self.idx] = task_serial
@@ -87,8 +87,10 @@ class Simulator(Process):
     def task_name(self, progress: int = 0) -> str:
         return self.tasks_name[progress if progress else self.progress]
 
-    def stop(self):
-        # TODO what if a task invoke barrier.wait() after the process stopped
+    def is_running(self) -> bool:
+        return self.not_stop.is_set()
+
+    def stop(self):     # stop all processes
         self.not_stop.clear()
         self.not_pause.set()
         self._sync_action.abort()
@@ -128,6 +130,7 @@ class Simulator(Process):
             return True
         except Exception as ex:
             print(self.name, 'execute task error:', ex.__str__)
+            self.not_stop.clear()
             return False
 
     def sync_action(self) -> bool:
@@ -137,6 +140,7 @@ class Simulator(Process):
             return True
         except Exception:
             print(self.name, self.idx, 'sync action failed at', self.task_name())
+            self.not_stop.clear()
             return False
 
     def sync_data(self, val: int) -> int:
@@ -150,20 +154,32 @@ class Simulator(Process):
             return max_val
         except Exception:
             print(self.name, self.pid, 'sync data failed at', self.task_name())
+            self.not_stop.clear()
             return -1
+
+    def pvp_sync(self, val: int, matched: bool) -> int:
+        data = self._sync_data[-1]
+        if matched and data == 0:
+            self._sync_data[-1] = val
+            return 0
+        elif data != 0:
+            return val - data
+        return 0
+
+    def reset_pvp_sync(self):
+        self._sync_data[-1] = 0
 
     def run(self) -> None:
         print(self.name, self.pid, 'start')
         self.prepare()
         while True:
-            if not self.not_stop.is_set():
+            if not self.is_running():
                 self.reset()
                 self.not_stop.wait()        # wait if stop
 
-            print(self.name, self.not_pause.is_set())
             self.not_pause.wait()           # wait if pause
-            if not self.not_stop.is_set():  # prevent recover from pause
-                continue                    # release pause and stop
+            if not self.is_running():       # prevent recover from pause
+                continue
 
             task_serial = self.indicator[self.idx]
             if has_task(self.progress, task_serial):

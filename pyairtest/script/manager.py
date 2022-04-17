@@ -35,8 +35,9 @@ def initialize() -> tuple:
         not_pause.set()
         # _not_stop.set()
         _sync_action = Barrier(parties=num)
-        _sync_data = mng.Array('i', [0] * num)
-        args = [-1, '', -1, -1, '', indicator, not_pause, not_stop, _sync_action, _sync_data]
+        _sync_data = mng.Array('i', [0] * (num + 1))
+        _acc_queue = _accounts(mng)
+        args = [-1, '', -1, -1, '', indicator, not_pause, not_stop, _sync_action, _sync_data, _acc_queue]
         for i in range(len(devs)):
             info = lines[i].split(',')
             args[0] = i
@@ -71,6 +72,18 @@ def _layout(simulators: list):
             idx += 1
         fy += dh
         fx = 0
+
+
+def _accounts(mng):
+    idx = 1
+    queue = mng.Queue()
+    while True:
+        account = conf.get('account', f'kara.account.{idx}')
+        if not account:
+            return queue
+        arr = account.replace('  ', ' ').split(' ')
+        queue.put(arr)
+        idx += 1
 
 
 if __name__ == '__main__':
