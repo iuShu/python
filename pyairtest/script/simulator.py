@@ -67,16 +67,16 @@ class Simulator(Process):
         return ()
 
     def wait(self, template: Template, timeout=FIND_TIMEOUT, interval=FIND_INTERVAL) -> tuple:
-        self.log('finding', template)
+        self.log('finding', template.filename)
         start_time = time.time()
         while self.is_running():
             rec = self.match(template)
             if rec:
-                self.log('found', template, 'cost', time.time() - start_time)
+                self.log('found', template.filename, 'cost', time.time() - start_time)
                 return rec
 
             if (time.time() - start_time) > timeout:
-                self.log('cannot found', template)
+                self.log('cannot found', template.filename)
                 return ()
             time.sleep(interval)
 
@@ -105,8 +105,9 @@ class Simulator(Process):
     def stop(self):     # stop all processes
         self.not_stop.clear()
         self.not_pause.set()
-        self._sync_action.abort()
+        self._sync_action.reset()
         self._sync_data[self.idx] = 0
+        self.reset_pvp_sync()
         self.log('stop at progress', self.task_name())
 
     def reset(self):
@@ -165,7 +166,7 @@ class Simulator(Process):
             self._sync_action.reset()
             return True
         except Exception:
-            self.log(self.name, self.idx, 'sync action failed at', self.task_name())
+            self.log(self.name, self.idx, 'sync action failed at', self.task_name(), '\n', traceback.format_exc())
             self.not_stop.clear()
             return False
 
@@ -174,12 +175,12 @@ class Simulator(Process):
         self.log('sync with value', val)
         try:
             self._sync_action.wait()
-            max_val = max(self._sync_data[self.idx])
+            max_val = max(self._sync_data)
             self._sync_data[self.idx] = 0
             self._sync_action.reset()
             return max_val
         except Exception:
-            self.log('sync data failed at', self.task_name())
+            self.log('sync data failed at', self.task_name(), '\n', traceback.format_exc())
             self.not_stop.clear()
             return -1
 
@@ -214,11 +215,11 @@ class Simulator(Process):
                     self.not_stop.clear()
                     continue
 
-            self.progress += 1
-            if self.progress > self.total:
+            if self.progress >= self.total - 1:
                 self.log('finished round')
                 self.stop()
 
+            self.progress += 1
             time.sleep(EXECUTE_INTERVAL)
 
 

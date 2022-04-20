@@ -12,10 +12,7 @@ from gui.multicombox import Combopicker
 from script.config import conf
 from script.tasklist import tasks
 from script import manager
-from utils import message, show, try_do
-from airtest.core.android.adb import cleanup_adb_forward
-
-# from kara.logger import LOG_DIR
+from utils import message, show, try_do, execmd
 
 
 class KaraUi(object):
@@ -54,12 +51,12 @@ class KaraUi(object):
         m_config = tk.Menu(m_option, tearoff=0)
         m_help = tk.Menu(menu, tearoff=0)
         m_option.add_command(label='init', command=self.m_init)
-        m_option.add_command(label='capture', command=self.m_capture)
+        # m_option.add_command(label='capture', command=self.m_capture)
         m_option.add_cascade(label='config', menu=m_config)
-        m_option.add_command(label='log dir', command=self.m_logger)
-        m_option.add_command(label='elv dir', command=self.m_elv)
-        bv = tk.BooleanVar(value=True)
-        m_option.add_checkbutton(label='task confirm', variable=bv, command=lambda: self.m_match_confirm(bv))
+        # m_option.add_command(label='log dir', command=self.m_logger)
+        # m_option.add_command(label='elv dir', command=self.m_elv)
+        # bv = tk.BooleanVar(value=True)
+        # m_option.add_checkbutton(label='task confirm', variable=bv, command=lambda: self.m_match_confirm(bv))
         m_config.add_command(label='kara', command=lambda: self.m_config('kara'))
         m_config.add_command(label='account', command=lambda: self.m_config('account'))
         m_option.add_separator()
@@ -118,7 +115,13 @@ class KaraUi(object):
     def win_exit(self):
         # [s.cleanup() for s in self.simulators]
         # manager.cleanup()
-        cleanup_adb_forward()
+
+        try_do(lambda: self._not_stop.set())
+        try_do(lambda: [s.kill() for s in self.simulators])
+
+        simulator_path = conf.get('kara', 'simulator.path')
+        execmd(f'{simulator_path}adb kill-server')
+
         try_do(lambda: self.capture_wnd.destroy())
         self.root.destroy()
 

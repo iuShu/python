@@ -156,6 +156,11 @@ def _sync_level(sml):
 
 
 def pvp_match(sml):
+    if sml.energy < 1 or sml.arena_counter >= 10:
+        sml.log('can not join pvp cause', sml.energy, sml.arena_counter)
+        sml.forward(1)      # to log out
+        return
+
     sml.log('enter arena')
     sml.click(pos('arena.button'))
     sml.wait(t_bf)
@@ -177,15 +182,13 @@ def pvp_match(sml):
     sml.reset_pvp_sync()    # reset
     cooldown(seconds=.4)
     while sml.is_running():
-        screen = sml.snapshot()
-        lt, rb = tmatch(screen, t_who)
+        lt, rb = tmatch(sml.snapshot(), t_who)
         if lt[0] != slt[0] or lt[1] != slt[1]:
             break
         cooldown(seconds=.1)
 
     while sml.is_running() and max_try > sml.pvp_sync(match_counter, False):
-        screen = sml.snapshot()
-        lt, rb = tmatch(screen, t_cancel)
+        lt, rb = tmatch(sml.snapshot(), t_cancel)
         if lt[0] != clt[0] or lt[1] != clt[1]:
             sml.pvp_sync(match_counter, True)
             sml.log('matched at', match_counter)
@@ -196,14 +199,14 @@ def pvp_match(sml):
     sml.click(cancel_pos)
     cooldown(seconds=.3)
     sml.click(cancel_pos)
-    sml.log('try cancel', match_counter)
+    sml.log('try cancel at', match_counter)
     cooldown()
     while sml.is_running():
         if sml.match(t_bf):
             sml.log('cancel ok')
             sml.click(pos('back'))
             cooldown()
-            sml.backward(0)    # re-enter arena
+            sml.backward(0)     # re-enter arena
             return
         elif sml.match(t_squirrel):
             sml.log('cancel failed')
@@ -214,6 +217,8 @@ def pvp_match(sml):
 
 def _battle(sml):
     sml.log('pvp loading')
+    sml.arena_counter += 1
+    sml.energy -= 1
     times = conf.getint('kara', 'battle.loading.times')
     sml.wait(t_squirrel, timeout=times)
     sml.log('start battle')
@@ -222,7 +227,7 @@ def _battle(sml):
     sml.click(pos('arena.battle.surrender'))
     cooldown()
     sml.log('surrendered')
-    sml.backward(0)
+    sml.backward(0)             # re-enter arena
 
 
 def logout(sml):
