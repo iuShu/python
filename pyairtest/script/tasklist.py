@@ -166,7 +166,7 @@ def pvp_match(sml):
     sml.wait(t_bf)
     cooldown()
 
-    scene_pos = conf.getpos('kara', get_scene(sml.level))
+    scene_pos = pos(get_scene(sml.level))
     slt = pos('arena.match.start.lt')
     clt = pos('arena.match.cancel.lt')
     cancel_pos = pos('arena.match.cancel.button')
