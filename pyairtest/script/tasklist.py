@@ -1,6 +1,7 @@
 import time
 import traceback
 
+import utils
 import win
 import textocr
 
@@ -98,8 +99,10 @@ def recognize_energy(sml):
     elt, erb = pos('energy.lt'), pos('energy.rb')
     roi = screen[elt[1]:erb[1], elt[0]:erb[0]]
     try:
-        reg = textocr.recognize(roi)
-        energy = int(only_numeric(reg).removesuffix('20'))
+        hsv = utils.hsv_filter(roi)
+        reg = textocr.recognize(hsv)
+        numeric = only_numeric(reg)
+        energy = int(numeric[:numeric.rfind('20')])
         sml.log('energy', energy)
         if energy < 1:
             sml.forward(3)      # logout and re-login
@@ -156,8 +159,9 @@ def _sync_level(sml):
 
 
 def pvp_match(sml):
+    sml.log('energy', sml.energy, ', pvp counter', sml.arena_counter)
     if sml.energy < 1 or sml.arena_counter >= 10:
-        sml.log('can not join pvp cause', sml.energy, sml.arena_counter)
+        sml.log('can not join pvp')
         sml.forward(1)      # to log out
         return
 

@@ -4,6 +4,9 @@ import win32con
 import cv2 as cv
 import subprocess
 
+lower_val = np.array([119, 0, 0])
+upper_val = np.array([255, 72, 255])
+
 
 def error(msg: str):
     raise RuntimeError(msg)
@@ -31,6 +34,12 @@ def tmatch(screen: np.ndarray, template: np.ndarray) -> tuple:
 def show(img, title='snapshot'):
     cv.imshow(title, img)
     cv.waitKey(0)
+
+
+def hsv_filter(img: np.ndarray) -> np.ndarray:
+    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    mask = cv.inRange(hsv, lower_val, upper_val)
+    return cv.bitwise_and(img, img, mask=mask)
 
 
 def only_numeric(txt: str) -> str:

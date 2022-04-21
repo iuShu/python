@@ -15,7 +15,8 @@ tesseract_root = conf.get('kara', 'tesseract.path')
 def recognize(img) -> str:
     img = cv.resize(img, None, fx=2, fy=2, interpolation=cv.INTER_AREA)
     tesseract_temp = os.path.normpath(temp_dir + f'/ocr-{os.getpid()}.png')
-    cv.imwrite(f'{tesseract_temp}', img)
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    cv.imwrite(f'{tesseract_temp}', gray)
     cmd = f'{tesseract_root}tesseract {tesseract_temp} stdout --psm 8 digits'
     prc = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, startupinfo=sinfo)
     out, err = prc.communicate()
