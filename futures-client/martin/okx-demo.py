@@ -12,11 +12,17 @@ def pre():
     # balance = account.get_account_balance('USDT')
     # print(balance)
 
-    orders = account.get_order_history(INST_TYPE_SWAP)
-    print(orders)
+    # orders = account.get_order_history(INST_TYPE_SWAP)
+    # print(orders)
 
-    # detail = account.get_order_detail()
+    # detail = account.get_order_detail_archive(inst_type=INST_TYPE_SWAP, ord_id='473073320380993536')
     # print(detail)
+
+    # pending = account.get_pending_order()
+    # print(pending)
+
+    info = account.get_order_info(inst_id='BTC-USDT-SWAP', ord_id='473073320380993536')
+    print(info)
 
 
 if __name__ == '__main__':

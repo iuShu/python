@@ -47,6 +47,13 @@ ACCOUNT_BALANCE = '/api/v5/account/balance'
 ASSET_BALANCE = '/api/v5/asset/balances'
 
 # trade
-GET_ORDER_HISTORY = '/api/v5/trade/orders-history'
-GET_ORDER_HISTORY_ARCHIVE = '/api/v5/trade/orders-history-archive'
-GET_ORDER_DETAILS = '/api/v5/trade/fills'
+PLACE_ORDER = '/api/v5/trade/order'
+PLACE_BATCH_ORDERS = '/api/v5/trade/batch-orders'
+CANCEL_ORDER = '/api/v5/trade/cancel-order'
+CANCEL_BATCH_ORDERS = '/api/v5/trade/cancel-batch-order'
+GET_ORDER_INFO = '/api/v5/trade/order'
+GET_PENDING_ORDER = '/api/v5/trade/orders-pending'
+GET_ORDER_HISTORY = '/api/v5/trade/orders-history'                  # 7 days
+GET_ORDER_HISTORY_ARCHIVE = '/api/v5/trade/orders-history-archive'  # 3 months
+GET_ORDER_DETAILS = '/api/v5/trade/fills'                           # 3 days
+GET_ORDER_DETAILS_ARCHIVE = '/api/v5/trade/fills-history'           # 3 months
