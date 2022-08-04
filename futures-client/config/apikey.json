@@ -1,0 +1,18 @@
+{
+  "okx": {
+    "api name": "",
+    "apikey": "",
+    "secretkey": "",
+    "passphrase": "",
+    "ip": "",
+    "permissions": "Read/Withdraw/Trade"
+  },
+  "bnb": {
+    "api name": "..",
+    "apikey": "",
+    "secretkey": "",
+    "passphrase": "",
+    "ip": "",
+    "permissions": "Read"
+  }
+}
