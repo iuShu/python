@@ -19,6 +19,12 @@ class Position:
         self._pos = pos
         return self
 
+    def pos_type(self, pos_type=None):
+        if not pos_type:
+            return self._pos_type
+        self._pos_type = pos_type
+        return self
+
     def lever(self, lever=0):
         if not lever:
             return self._lever

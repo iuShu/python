@@ -2,13 +2,14 @@ import asyncio
 import datetime
 import json
 import traceback
-import logging
 
 import websockets
 from okx.v5.consts import *
+from okx.v5.utils import log
+from okx.v5.handler import Handler
 
-logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s', level=logging.DEBUG)
-log = logging.getLogger()
+
+handles = []
 
 
 async def subscribe_public(channels):
@@ -51,9 +52,11 @@ async def subscribing(res):
 
 
 async def handle_recv(res):
-    data = res['data']
-    for d in data:
-        print(d)
+    try:
+        for h in handles:
+            h.fire_handle(res)
+    except Exception:
+        traceback.print_exc()
 
 
 async def ping(ws):
@@ -72,6 +75,17 @@ def local_time():
     return t + "Z"
 
 
+def register(hdl: Handler):
+    if type(hdl) != Handler:
+        raise TypeError('Accept Handler only')
+    if hdl:
+        handles.append(hdl)
+
+
+def startup():
+    return asyncio.run(subscribe_public(TICKERS_BTC_USDT_SWAP))
+
+
 if __name__ == '__main__':
-    asyncio.run(subscribe_public(TICKERS_BTC_USDT_SWAP))
+    startup()
 

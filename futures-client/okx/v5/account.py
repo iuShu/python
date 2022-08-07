@@ -143,7 +143,7 @@ class Account(Client):
 
     def place_order(self, order: dict):
         if not order:
-            raise ValueError('order is null')
+            raise ValueError('order can not be NONE')
         return self._request_with_params(POST, PLACE_ORDER, order)
 
     def place_batch_order(self, orders: list):
@@ -216,6 +216,7 @@ class Account(Client):
     def create_algo_oco(inst_id: str, td_mode: str, algo_type: str, side: str, sz: str,
                         tp_tri_px: str, sl_tri_px: str, tp_tri_px_type=PRICE_TYPE_LAST, sl_tri_px_type=PRICE_TYPE_LAST,
                         tp_ord_px='-1', sl_ord_px='-1', pos_side='', ccy='', tag='', tgt_ccy='', reduce_only=''):
+        # -1 market price (default)
         params = {'instId': inst_id, 'tdMode': td_mode, 'ordType': algo_type, 'side': side, 'sz': sz,
                   'tpTriggerPx': tp_tri_px, 'tpTriggerPxType': tp_tri_px_type, 'tpOrdPx': tp_ord_px,
                   'slTriggerPx': sl_tri_px, 'slTriggerPxType': sl_tri_px_type, 'slOrdPx': sl_ord_px}
@@ -231,11 +232,15 @@ class Account(Client):
             params['reduceOnly'] = reduce_only
         return params
 
-    def place_algo_order(self, algo_order):
+    def place_algo_oco(self, algo_order):
         if not algo_order:
             raise ValueError('algo order can not be NONE')
         return self._request_with_params(POST, PLACE_ALGO_ORDER, algo_order)
 
-    def cancel_algo_order(self, algo_id: str, inst_id: str):
-        params = {'algoId': algo_id, 'instId': inst_id}
+    def cancel_algo_oco(self, inst_id: str, algo_ids: list):
+        if not algo_ids:
+            raise ValueError('must provide at less one algoId')
+        params = []
+        for algo in algo_ids:
+            params.append({'instId': inst_id, 'algoId': algo})
         return self._request_with_params(POST, CANCEL_ALGO_ORDER, params)

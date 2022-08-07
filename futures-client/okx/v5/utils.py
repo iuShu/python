@@ -2,6 +2,10 @@ import hmac
 import base64
 import datetime
 from . import consts as c
+import logging
+
+logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s', level=logging.DEBUG)
+log = logging.getLogger()
 
 
 def sign(message, secret_key):

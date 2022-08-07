@@ -11,6 +11,7 @@ class Order:
 
     def __init__(self):
         self._id = ms_time() * 100 + 1
+        self._ord_id = None
         self._start_price = None
         self._side = None
         self._position = None
@@ -20,9 +21,18 @@ class Order:
         self._stop_loss = None
 
         self._current_price = None
+        self._state = None
+        self._utime = None
+        self._ctime = None
 
     def id(self):
         return self._id
+
+    def ord_id(self, ord_id=None):
+        if not ord_id:
+            return self._ord_id
+        self._ord_id = ord_id
+        return self
 
     def start_price(self, price=None):
         if not price:
@@ -72,6 +82,24 @@ class Order:
         if not stop_loss:
             return self._stop_loss
         self._stop_loss = stop_loss
+        return self
+
+    def state(self, state=None):
+        if not state:
+            return self._state
+        self._state = state
+        return self
+
+    def utime(self, utime=None):
+        if not utime:
+            return self._utime
+        self._utime = utime
+        return self
+
+    def ctime(self, ctime=None):
+        if not ctime:
+            return self._ctime
+        self._ctime = ctime
         return self
 
     def open_order(self):

@@ -10,7 +10,7 @@ def train():
     # balance = account.get_account_balance('USDT')
     # print(balance)
 
-    # orders = account.get_order_history(INST_TYPE_SWAP, archive=True)
+    # orders = account.get_order_history(INST_TYPE_SWAP, limit=5)
     # print(orders)
 
     # detail = account.get_order_detail_archive(inst_type=INST_TYPE_SWAP, ord_id='473073320380993536')

@@ -73,6 +73,8 @@ ALGO_STATE_ORDER_FAILED = 'order_failed'
 # order state
 STATE_CANCELED = 'canceled'
 STATE_FILLED = 'filled'
+STATE_PARTIALLY_FILLED = 'partially_filled'
+STATE_LIVE = 'live'
 
 # public
 SERVER_TIMESTAMP_URL = '/api/v5/public/time'

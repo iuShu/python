@@ -10,6 +10,9 @@ class Side:
     def __init__(self, side: str):
         self._side = side
 
+    def side(self) -> str:
+        return self._side
+
     def profit_price(self, price: Price, rate: float) -> float:
         pass
 
