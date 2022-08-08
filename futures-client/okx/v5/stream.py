@@ -76,7 +76,7 @@ def local_time():
 
 
 def register(hdl: Handler):
-    if type(hdl) != Handler:
+    if not issubclass(type(hdl), Handler):
         raise TypeError('Accept Handler only')
     if hdl:
         handles.append(hdl)

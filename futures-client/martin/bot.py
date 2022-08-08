@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import traceback
 
@@ -41,32 +42,42 @@ class MartinBot(Handler):
         return self
 
     def _handle(self, data):
-        print(data)
+        # print(data)
         px = self._latest_px(data)
 
         try:
             if self._mo:
                 self._follow(px)
             else:
-                self._place_order(px)
+                self._mo = create_morder(px)
+                ro = self._convert_order(self._mo)
+                ro.pop('px')    # place order at current last price
+                self._place_order(ro)
         except Exception:
             traceback.print_exc()
             log.fatal('handle error, shutdown bot')
             self.shutdown()
 
     def _follow(self, px):
+        if self._mo.state() != STATE_FILLED:
+            log.info('order %s not filled', self._mo.ord_id())
+            return
+
         px = Computable(float(px))
         spx = Computable(self._mo.stop_loss().stop_price())
         if spx - px <= FOLLOW_GAP:          # !!! short side
+            log.info('create next order at price %s', px)
             nxt = self._mo.create_next()
             if not nxt:                     # reached end
                 return
             self._mo = nxt
             nro = self._convert_order(nxt)
             self._place_order(nro)
+            log.info('place order %s mid %s', nxt.ord_id(), nxt.id())
             return
 
-        # trace take profit order
+        # check take profit algo order
+        log.info('check take-profit algo order')
         res = self._client.get_order_history(inst_type=INST_TYPE_SWAP, inst_id=self._inst_id, state=STATE_FILLED, limit=10)
         history = self._check_resp(res, 'trace take profit order')
         last_order = history[0]
@@ -77,22 +88,20 @@ class MartinBot(Handler):
             # self._cancel_algos()    # next round
             self.shutdown()         # developing test
 
-    def _place_order(self, px):
-        mo = create_morder(px)
-        order = self._convert_order(mo)
+    def _place_order(self, order):
         if not order:
             log.warning('No order to be placed')
             return
 
+        log.info('prepare place order %s', json.dumps(order))
         res = self._client.place_order(order)
         d = self._check_resp(res, 'place order')
         if not d:
-            return
+            raise RuntimeError('place order request error ' + res)
 
         ord_id = d['ordId']
-        mo.state(STATE_LIVE)
-        mo.ord_id(ord_id)
-        self._mo = mo
+        self._mo.state(STATE_LIVE)
+        self._mo.ord_id(ord_id)
         log.info('placed order %s', ord_id)
         if self._trace_order() and self._place_algo():
             log.info('order %s filled and algo placed', ord_id)
@@ -102,6 +111,7 @@ class MartinBot(Handler):
         self._check_resp(res, 'cancel order')
         log.warning('cancel order %s', ord_id)
         self._cancel_algos()
+        self._close_all()
         self._mo = None
         self.shutdown()
         log.info('shutdown bot')
@@ -119,11 +129,16 @@ class MartinBot(Handler):
                 state = order['state']
                 log.info('%d trace order %s state %s', i, ord_id, state)
                 if state == STATE_FILLED:
+                    self._mo.start_price(LastPrice(float(order['fillPx'])))
+                    self._mo.state(state)
+                    log.info('order filled at price %s', order['fillPx'])
                     return True
                 elif state == STATE_PARTIALLY_FILLED or state == STATE_LIVE:
+                    self._mo.state(state)
                     time.sleep(TRACE_INTERVAL)
                     continue
                 else:
+                    self._mo.state(state)
                     log.warning('%d trace order %s have been canceled', i, ord_id)
                     return False
             return False
@@ -163,8 +178,9 @@ class MartinBot(Handler):
         return account
 
     def _convert_order(self, mo: MartinOrder) -> dict:
+        sz = mo.position().pos() * 1000
         return self._client.create_order(inst_id=self._inst_id, td_mode=mo.position().pos_type(), side=SIDE_SELL,
-                                         ord_type=ORDER_TYPE_LIMIT, sz=str(mo.position().pos()),
+                                         ord_type=ORDER_TYPE_LIMIT, sz=str(sz),
                                          pos_side=mo.side().side(), px=str(mo.start_price()))
 
     def shutdown(self):
