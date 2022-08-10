@@ -1,5 +1,5 @@
 
 class Strategy:
 
-    def __init__(self):
+    def can_execute(self, px: str, data) -> bool:
         pass

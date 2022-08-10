@@ -244,3 +244,19 @@ class Account(Client):
         for algo in algo_ids:
             params.append({'instId': inst_id, 'algoId': algo})
         return self._request_with_params(POST, CANCEL_ALGO_ORDER, params)
+
+    def get_candles(self, inst_id: str, bar=BAR_15M, before='', after='', limit=''):
+        params = {'instId': inst_id}
+        if bar:
+            params['bar'] = bar
+        if before:
+            params['before'] = before
+        if after:
+            params['after'] = after
+        if limit:
+            params['limit'] = limit
+        return self._request_with_params(GET, MARKET_CANDLE, params)
+
+    def market_ticker(self, inst_id: str):
+        return self._request_with_params(GET, MARKET_TICKER, {'instId': inst_id})
+

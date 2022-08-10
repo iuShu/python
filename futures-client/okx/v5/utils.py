@@ -4,7 +4,7 @@ import datetime
 from . import consts as c
 import logging
 
-logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(levelname)s %(filename)s[line:%(lineno)d] %(message)s', level=logging.INFO)
 log = logging.getLogger()
 
 
@@ -51,3 +51,14 @@ def signature(timestamp, method, request_path, body, secret_key):
     mac = hmac.new(bytes(secret_key, encoding='utf8'), bytes(message, encoding='utf-8'), digestmod='sha256')
     d = mac.digest()
     return base64.b64encode(d)
+
+
+def check_resp(raw: dict, multiple=False):
+    if 'code' in raw and raw['code'] != '0':
+        return None
+    if 'data' not in raw:
+        return None
+    data = raw['data']
+    if 'sCode' in data and data['sCode'] != '0':
+        return None
+    return data[0] if multiple else data

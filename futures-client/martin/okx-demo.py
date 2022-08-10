@@ -22,8 +22,8 @@ def train():
     # info = account.get_order_info(inst_id='BTC-USDT-SWAP', ord_id='473073320380993536')
     # print(info)
 
-    algo_pending = account.get_algo_order_pending(algo_type=ALGO_TYPE_OCO, inst_type=INST_TYPE_SWAP)
-    print(algo_pending)
+    # algo_pending = account.get_algo_order_pending(algo_type=ALGO_TYPE_OCO, inst_type=INST_TYPE_SWAP)
+    # print(algo_pending)
 
     # algo_history = account.get_algo_order_history(algo_type=ALGO_TYPE_OCO, inst_type=INST_TYPE_SWAP, state=ALGO_STATE_EFFECTIVE)
     # print(algo_history)
@@ -44,6 +44,16 @@ def train():
 
     # cancel = account.cancel_order(inst_id=INST_BTC_USDT_SWAP, ord_id='476175419176259584')
     # print(cancel)
+
+    ticker = account.market_ticker(INST_BTC_USDT_SWAP)
+    last_px = ticker['data'][0]['last']
+
+    from strategy.simple import SimpleMAStrategy
+    candles = account.get_candles(INST_BTC_USDT_SWAP, limit=11)
+    print(candles)
+
+    stg = SimpleMAStrategy()
+    print(stg.can_execute(last_px, candles['data']))
 
 
 def swap_sell(account):

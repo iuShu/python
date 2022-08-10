@@ -7,6 +7,12 @@ class Handler:
         self._channel = channel
         self._inst_id = inst_id
 
+    def channel(self) -> str:
+        return self._channel
+
+    def inst_id(self) -> str:
+        return self._inst_id
+
     def fire_handle(self, raw):
         if 'arg' not in raw or 'data' not in raw:
             log.warning('unknown recv data')

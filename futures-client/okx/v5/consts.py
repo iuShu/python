@@ -78,6 +78,8 @@ STATE_LIVE = 'live'
 
 # public
 SERVER_TIMESTAMP_URL = '/api/v5/public/time'
+MARKET_CANDLE = '/api/v5/market/candles'
+MARKET_TICKER = '/api/v5/market/ticker'
 
 # account
 ACCOUNT_CONFIG = '/api/v5/account/config'
@@ -105,3 +107,13 @@ ALGO_ORDER_HISTORY = '/api/v5/trade/orders-algo-history'
 
 # channels
 TICKERS_BTC_USDT_SWAP = [{'channel': 'tickers', 'instId': INST_BTC_USDT_SWAP}]
+
+# bar
+BAR_1M = '1m'
+BAR_3M = '3m'
+BAR_5M = '5m'
+BAR_15M = '15m'
+BAR_30M = '30m'
+BAR_1H = '1H'
+BAR_2H = '2H'
+BAR_4H = '4H'

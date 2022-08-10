@@ -50,8 +50,7 @@ class MartinBot(Handler):
                 self._follow(px)
             else:
                 self._mo = create_morder(px)
-                ro = self._convert_order(self._mo)
-                ro.pop('px')    # place order at current last price
+                ro = self._convert_order(self._mo, True)
                 self._place_order(ro)
         except Exception:
             traceback.print_exc()
@@ -107,9 +106,10 @@ class MartinBot(Handler):
             log.info('order %s filled and algo placed', ord_id)
             return
 
-        res = self._client.cancel_order(self._inst_id, ord_id=ord_id)
-        self._check_resp(res, 'cancel order')
-        log.warning('cancel order %s', ord_id)
+        if self._mo.state() != STATE_FILLED:
+            res = self._client.cancel_order(self._inst_id, ord_id=ord_id)
+            self._check_resp(res, 'cancel order')
+            log.warning('canceled order %s', ord_id)
         self._cancel_algos()
         self._close_all()
         self._mo = None
@@ -131,6 +131,7 @@ class MartinBot(Handler):
                 if state == STATE_FILLED:
                     self._mo.start_price(LastPrice(float(order['fillPx'])))
                     self._mo.state(state)
+                    self._mo.open_order()   # re-calculate tp and sl
                     log.info('order filled at price %s', order['fillPx'])
                     return True
                 elif state == STATE_PARTIALLY_FILLED or state == STATE_LIVE:
@@ -150,7 +151,7 @@ class MartinBot(Handler):
         pos = self._mo.position()
         tp, sl = self._mo.take_profit(), self._mo.stop_loss()
         algo = self._client.create_algo_oco(inst_id=self._inst_id, td_mode=pos.pos_type(), algo_type=ALGO_TYPE_OCO,
-                                            side=SIDE_BUY, sz=str(pos.pos()),
+                                            side=SIDE_BUY, sz=str(int(pos.pos() * 1000)),
                                             tp_tri_px=str(tp.stop_price()), sl_tri_px=str(sl.stop_price()))
         res = self._client.place_algo_oco(algo)
         data = self._check_resp(res, 'place algo')
@@ -172,19 +173,25 @@ class MartinBot(Handler):
         self._check_resp(res, 'close position')
 
     def _init_client(self):
-        json = conf('okx')
-        account = Account(api_key=json['apikey'], api_secret_key=json['secretkey'], passphrase=json['passphrase'],
+        info = conf('okx')
+        account = Account(api_key=info['apikey'], api_secret_key=info['secretkey'], passphrase=info['passphrase'],
                           test=self._test_net)
         return account
 
-    def _convert_order(self, mo: MartinOrder) -> dict:
-        sz = mo.position().pos() * 1000
+    def _convert_order(self, mo: MartinOrder, init=False) -> dict:
+        ord_type = ORDER_TYPE_MARKET if init else ORDER_TYPE_LIMIT
+        sz = str(int(mo.position().pos() * 1000))
+        px = str(mo.start_price().price()) if not init else ''
         return self._client.create_order(inst_id=self._inst_id, td_mode=mo.position().pos_type(), side=SIDE_SELL,
-                                         ord_type=ORDER_TYPE_LIMIT, sz=str(sz),
-                                         pos_side=mo.side().side(), px=str(mo.start_price()))
+                                         ord_type=ord_type, sz=sz, pos_side=mo.side().side(), px=px)
 
     def shutdown(self):
-        if self._event_loop:
+        log.info('shutdown')
+        if not self._event_loop:
+            for t in asyncio.Task.all_tasks(self._event_loop):
+                log.info(t.cancel())
+            self._event_loop.stop()
+            self._event_loop.run_forever()  # prevent error throwing
             self._event_loop.close()
 
     @staticmethod
@@ -218,7 +225,7 @@ def create_morder(price) -> MartinOrder:
 
     mo = MartinOrder()
     mo.start_price(p).position(pos).side(sd).open_fee(mf).close_fee(mf)
-    mo.step_rate(.004).profit_step_rate(.0002)
+    mo.step_rate(.004)._profit_step_rate(.0002)
     mo.open_order()
     return mo
 
