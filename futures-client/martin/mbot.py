@@ -5,9 +5,8 @@ from martin.mo import MartinOrder
 from core.utils import sub
 from config.api_config import conf
 
-from okx.v5.handler import Handler
+from okx.v5.subscriber import Subscriber
 from okx.v5.account import Account
-from okx.v5.stream import register, _shutdown_signal, startup
 from okx.v5.utils import log, check_resp
 from okx.v5.consts import *
 
@@ -18,18 +17,18 @@ ENSURE_MAX_COUNT = 30       # max order state ensuring count
 ENSURE_INTERVAL = 1000      # millisecond
 
 
-class MartinAutoBot(Handler):
+class MartinAutoBot(Subscriber):
 
-    def __init__(self, channel: str, inst_id: str):
-        Handler.__init__(self, channel, inst_id)
+    def __init__(self, inst_id: str):
+        Subscriber.__init__(self)
         self._client = self._init_client()
+        self._inst_id = inst_id
         self._last_px = None
         self._order = None
-        self._stop = False
         self._strategy = None
 
     def _handle(self, data):
-        if self._stop:
+        if not self.is_running():
             log.warning('bot already stop')
             return
 
@@ -71,7 +70,7 @@ class MartinAutoBot(Handler):
             self.stop()
 
     def _place_order(self, order: MartinOrder, ord_type: str, px=''):
-        o = self._client.create_order(inst_id=self.inst_id(), td_mode=order.pos_type, side=order.pos_side,
+        o = self._client.create_order(inst_id=self._inst_id, td_mode=order.pos_type, side=order.pos_side,
                                       ord_type=ord_type, sz=str(order.pos), px=px)
         res = self._client.place_order(o)
         data = check_resp(res)
@@ -87,22 +86,21 @@ class MartinAutoBot(Handler):
         return self._follow_algos()
 
     def run(self):
-        self._stop = False
-        register(self)
-        startup()
+        self.subscribe('tickers', self._inst_id)
+        self.subscribe('candle15m', self._inst_id)
+        self.startup()
 
     def stop(self):
         log.info('[stop] stop bot')
         log.fatal('!!! CHECK ORDER AT PC/APP OKX !!!')
         log.fatal('!!! CHECK ORDER AT PC/APP OKX !!!')
         log.fatal('!!! CHECK ORDER AT PC/APP OKX !!!')
-        self._stop = True
         self._order = None
-        _shutdown_signal()
+        self.shutdown()
 
     def _ensure_order(self, order: MartinOrder) -> bool:
         for i in range(ENSURE_MAX_COUNT):
-            res = self._client.get_order_info(inst_id=self.inst_id(), ord_id=order.ord_id)
+            res = self._client.get_order_info(inst_id=self._inst_id, ord_id=order.ord_id)
             data = check_resp(res)
             if not data:
                 log.error('[ensure] %d order info request error %s', i+1, res)
@@ -127,7 +125,7 @@ class MartinAutoBot(Handler):
                 time.sleep(ENSURE_INTERVAL / 1000)
 
         log.info('[ensure] order still not be filled, canceled order and stop the bot')
-        res = self._client.cancel_order(inst_id=self.inst_id(), ord_id=order.ord_id)
+        res = self._client.cancel_order(inst_id=self._inst_id, ord_id=order.ord_id)
         data = check_resp(res)
         if data:
             log.info('[ensure] canceled order success %s', order)
@@ -141,7 +139,7 @@ class MartinAutoBot(Handler):
 
         tpx = str(self._order.profit_price())
         spx = str(self._order.stop_loss_price())
-        algo = self._client.create_algo_oco(inst_id=self.inst_id(), td_mode=self._order.pos_type,
+        algo = self._client.create_algo_oco(inst_id=self._inst_id, td_mode=self._order.pos_type,
                                             algo_type=ALGO_TYPE_OCO, side=self._order.pos_side, sz=str(self._order.pos),
                                             tp_tri_px=tpx, sl_tri_px=spx)
         res = self._client.place_algo_oco(algo)
@@ -180,7 +178,7 @@ class MartinAutoBot(Handler):
 
 if __name__ == '__main__':
     sub = TICKERS_BTC_USDT_SWAP[0]
-    bot = MartinAutoBot(sub['channel'], sub['instId'])
+    bot = MartinAutoBot(INST_BTC_USDT_SWAP)
     bot.run()
 
 

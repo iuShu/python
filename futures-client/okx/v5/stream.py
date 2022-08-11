@@ -6,10 +6,10 @@ import traceback
 import websockets
 from okx.v5.consts import *
 from okx.v5.utils import log
-from okx.v5.handler import Handler
+from okx.v5.subscriber import Subscriber
 
 
-_handlers = []
+_subscribers = []
 _subscribe = dict()
 _unsubscribe = dict()
 _subscribed = dict()
@@ -92,10 +92,10 @@ async def dispatching(res):
         log.warning('unknown response data %s', res)
 
 
-async def handle_recv(res):
+async def handle_recv(resp):
     try:
-        for h in _handlers:
-            h.fire_handle(res)
+        for s in _subscribers:
+            s.on_data(resp)
     except Exception:
         traceback.print_exc()
 
@@ -103,8 +103,8 @@ async def handle_recv(res):
 async def ping(ws):
     try:
         await ws.send('ping')
-        res = await ws.recv()
-        log.info('reconnected', res)
+        resp = await ws.recv()
+        log.info('reconnected', resp)
         return True
     except Exception:
         return False
@@ -116,11 +116,11 @@ def local_time():
     return t + "Z"
 
 
-def register(hdl: Handler):
-    if not issubclass(type(hdl), Handler):
-        raise TypeError('Accept Handler only')
-    if hdl:
-        _handlers.append(hdl)
+def register(subscriber: Subscriber):
+    if not issubclass(type(subscriber), Subscriber):
+        raise TypeError('accept Subscriber class or subclass only')
+    if subscriber:
+        _subscribers.append(subscriber)
 
 
 def startup():
