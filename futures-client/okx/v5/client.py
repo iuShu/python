@@ -40,7 +40,8 @@ class Client(object):
 
         print("url:", url)
         print("headers:", header)
-        print("body:", body)
+        if method == c.POST:
+            print("body:", body)
 
         # send request
         response = None

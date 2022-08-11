@@ -2,12 +2,11 @@ import asyncio
 import datetime
 import json
 import traceback
+from asyncio import IncompleteReadError
 
 import websockets
 from okx.v5.consts import *
 from okx.v5.utils import log
-from okx.v5.subscriber import Subscriber
-
 
 _subscribers = []
 _subscribe = dict()
@@ -25,7 +24,10 @@ async def connect():
                     try:
                         await handle_channel(ws)
                         res = await asyncio.wait_for(ws.recv(), timeout=30)
-                        log.info('<< %s', res)
+                        log.debug('<< %s', res)
+                    except IncompleteReadError:
+                        log.warning('IncompleteReadError, try continue')
+                        continue
                     except Exception:
                         traceback.print_exc()
                         if await ping(ws):
@@ -43,7 +45,7 @@ async def connect():
                     log.error('subscribing error, %d reconnecting...', i+1)
                 else:
                     log.info('shutdown subscriber program at %d', i+1)
-                    ws.close()
+                    await ws.close()
                     break
         except Exception:
             traceback.print_exc()
@@ -56,12 +58,12 @@ async def handle_channel(ws):
     if _subscribe:
         params = {'op': 'subscribe', 'args': _subscribe.popitem()[1]}
         text = json.dumps(params)
-        log.info('>> %s', text)
+        log.debug('>> %s', text)
         await ws.send(text)
     if _unsubscribe:
         params = {'op': 'unsubscribe', 'args': _unsubscribe.popitem()[1]}
         text = json.dumps(params)
-        log.info('>> %s', text)
+        log.debug('>> %s', text)
         await ws.send(text)
 
 
@@ -78,12 +80,12 @@ async def dispatching(res):
             channel, inst_id = arg['channel'], arg['instId']
             key = _channel_key(channel, inst_id)
             _subscribed[key] = [{'channel': channel, 'instId': inst_id}]
-            log.info('subscribed: %s', [k for k in _subscribed.keys()])
+            log.info('subscribed: %s', [v for v in _subscribed.values()])
         elif event == 'unsubscribe':
             channel, inst_id = arg['channel'], arg['instId']
             key = _channel_key(channel, inst_id)
             _subscribed.pop(key)
-            log.info('subscribed: %s', [k for k in _subscribed.keys()])
+            log.info('subscribed: %s', [v for v in _subscribed.values()])
         else:
             log.warning('unknown event %s', event)
     elif 'data' in res:
@@ -104,7 +106,7 @@ async def ping(ws):
     try:
         await ws.send('ping')
         resp = await ws.recv()
-        log.info('reconnected', resp)
+        log.info('ping %s', resp)
         return True
     except Exception:
         return False
@@ -116,8 +118,8 @@ def local_time():
     return t + "Z"
 
 
-def register(subscriber: Subscriber):
-    if not issubclass(type(subscriber), Subscriber):
+def register(subscriber):
+    if 'Subscriber' not in [b.__name__ for b in subscriber.__class__.__bases__]:
         raise TypeError('accept Subscriber class or subclass only')
     if subscriber:
         _subscribers.append(subscriber)

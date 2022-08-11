@@ -1,5 +1,8 @@
 
 class Strategy:
 
-    def can_execute(self, px: str, data) -> bool:
+    def feed(self, data):
+        pass
+
+    def can_execute(self, px: float) -> bool:
         pass

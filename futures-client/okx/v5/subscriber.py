@@ -1,3 +1,5 @@
+import traceback
+
 from okx.v5 import stream
 from okx.v5.utils import log
 
@@ -21,9 +23,13 @@ class Subscriber:
     def startup(self):
         if not self._channels:
             raise ValueError('subscribe to at least ONE channel')
-        stream.register(self)
-        stream.startup()
-        self._running = True
+        try:
+            self._running = True
+            stream.register(self)
+            stream.startup()
+        except Exception:
+            traceback.print_exc()
+            self._running = False
 
     def shutdown(self):
         if not self._running:
@@ -39,9 +45,9 @@ class Subscriber:
         arg = resp['arg']
         key = self._channel_key(arg['channel'], arg['instId'])
         if key in self._channels:
-            self._handle(resp['data'])
+            self._handle(arg['channel'], arg['instId'], resp['data'])
 
-    def _handle(self, data):
+    def _handle(self, channel: str, inst_id: str, data):
         pass
 
     def is_running(self) -> bool:

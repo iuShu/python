@@ -45,15 +45,15 @@ def train():
     # cancel = account.cancel_order(inst_id=INST_BTC_USDT_SWAP, ord_id='476175419176259584')
     # print(cancel)
 
-    ticker = account.market_ticker(INST_BTC_USDT_SWAP)
-    last_px = ticker['data'][0]['last']
+    # ticker = account.market_ticker(INST_BTC_USDT_SWAP)
+    # last_px = ticker['data'][0]['last']
 
     from strategy.simple import SimpleMAStrategy
-    candles = account.get_candles(INST_BTC_USDT_SWAP, limit=11)
+    candles = account.get_candles(INST_BTC_USDT_SWAP, bar='1m', limit=11)
     print(candles)
 
-    stg = SimpleMAStrategy()
-    print(stg.can_execute(last_px, candles['data']))
+    # stg = SimpleMAStrategy()
+    # print(stg.can_execute(last_px, candles['data']))
 
 
 def swap_sell(account):

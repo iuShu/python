@@ -61,4 +61,4 @@ def check_resp(raw: dict, multiple=False):
     data = raw['data']
     if 'sCode' in data and data['sCode'] != '0':
         return None
-    return data[0] if multiple else data
+    return data[0] if not multiple else data

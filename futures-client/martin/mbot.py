@@ -2,6 +2,7 @@ import time
 import traceback
 
 from martin.mo import MartinOrder
+from martin.strategy.simple import SimpleMAStrategy
 from core.utils import sub
 from config.api_config import conf
 
@@ -25,15 +26,23 @@ class MartinAutoBot(Subscriber):
         self._inst_id = inst_id
         self._last_px = None
         self._order = None
-        self._strategy = None
+        self._strategy = SimpleMAStrategy()
+        self.subscribe('tickers', self._inst_id)
+        self.subscribe('candle15m', self._inst_id)
 
-    def _handle(self, data):
+    def _handle(self, channel: str, inst_id: str, data):
         if not self.is_running():
             log.warning('bot already stop')
             return
 
         # TODO check whether the program running time would affect the speed of data handling
 
+        # handle candle data
+        if channel.startswith('candle'):
+            self._strategy.feed(data)
+            return
+
+        # handle tickers data
         self._detect_last_px(data)
         if self._order:
             self._safe_code(self._trace())
@@ -41,19 +50,21 @@ class MartinAutoBot(Subscriber):
             self._safe_code(self._initial())
 
     def _initial(self):
+        if not self._strategy.can_execute(self._last_px):
+            log.info('[initial] not a good point')
+            return
+
         order = MartinOrder(START_POS_NUM)
         if not self._place_order(order, ORDER_TYPE_MARKET):
             self.stop()
 
     def _trace(self):
-        if not self._last_px:
-            log.error('[trace-%d] last price is %s', self._order.index(), self._last_px)
-            self.stop()
-            return
         if not self._order or self._order.state != STATE_FILLED:
             log.fatal('[trace-%d] illegal order %s', self._order.index(), self._order)
             self.stop()
             return
+
+        # TODO trace profit
 
         follow_price = self._order.follow_price()
         px_gap = abs(sub(self._last_px, follow_price))
@@ -66,7 +77,7 @@ class MartinAutoBot(Subscriber):
         if not self._place_order(nxt, ORDER_TYPE_LIMIT, px=str(nxt.px)):
             self.stop()
         if nxt.index() == nxt.max_order():
-            log.info('[trace] we need to stop, hope you lucky.')
+            log.info('[trace] we have to stop, calm down and good lucky.')
             self.stop()
 
     def _place_order(self, order: MartinOrder, ord_type: str, px=''):
@@ -85,17 +96,12 @@ class MartinAutoBot(Subscriber):
             return False
         return self._follow_algos()
 
-    def run(self):
-        self.subscribe('tickers', self._inst_id)
-        self.subscribe('candle15m', self._inst_id)
-        self.startup()
-
     def stop(self):
+        self._order = None
         log.info('[stop] stop bot')
         log.fatal('!!! CHECK ORDER AT PC/APP OKX !!!')
         log.fatal('!!! CHECK ORDER AT PC/APP OKX !!!')
         log.fatal('!!! CHECK ORDER AT PC/APP OKX !!!')
-        self._order = None
         self.shutdown()
 
     def _ensure_order(self, order: MartinOrder) -> bool:
@@ -139,8 +145,9 @@ class MartinAutoBot(Subscriber):
 
         tpx = str(self._order.profit_price())
         spx = str(self._order.stop_loss_price())
+        full_pos = str(self._order.full_pos())
         algo = self._client.create_algo_oco(inst_id=self._inst_id, td_mode=self._order.pos_type,
-                                            algo_type=ALGO_TYPE_OCO, side=self._order.pos_side, sz=str(self._order.pos),
+                                            algo_type=ALGO_TYPE_OCO, side=self._order.pos_side, sz=full_pos,
                                             tp_tri_px=tpx, sl_tri_px=spx)
         res = self._client.place_algo_oco(algo)
         data = check_resp(res)
@@ -179,7 +186,7 @@ class MartinAutoBot(Subscriber):
 if __name__ == '__main__':
     sub = TICKERS_BTC_USDT_SWAP[0]
     bot = MartinAutoBot(INST_BTC_USDT_SWAP)
-    bot.run()
+    bot.startup()
 
 
 
