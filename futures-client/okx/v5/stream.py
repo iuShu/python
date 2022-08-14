@@ -2,9 +2,11 @@ import asyncio
 import datetime
 import json
 import traceback
-from asyncio import IncompleteReadError
+from asyncio.exceptions import TimeoutError
 
 import websockets
+from websockets.exceptions import ConnectionClosedError
+
 from okx.v5.consts import *
 from okx.v5.utils import log
 
@@ -16,7 +18,7 @@ _shutdown_signal = []
 
 
 async def connect():
-    for i in range(5):
+    while True:
         try:
             async with websockets.connect(WSS_PUBLIC_URL) as ws:
                 log.info('websocket connected to %s', WSS_PUBLIC_URL)
@@ -25,8 +27,11 @@ async def connect():
                         await handle_channel(ws)
                         res = await asyncio.wait_for(ws.recv(), timeout=30)
                         log.debug('<< %s', res)
-                    except IncompleteReadError:
-                        log.warning('IncompleteReadError, try continue')
+                    except ConnectionClosedError:
+                        log.warning('IncompleteReadError caused this error, try re-connect')
+                        break
+                    except TimeoutError:
+                        log.warning('CancelledError caused a timeout error, try continue')
                         continue
                     except Exception:
                         traceback.print_exc()
@@ -43,6 +48,8 @@ async def connect():
                         continue
                 if not _shutdown_signal:
                     log.error('subscribing error, %d reconnecting...', i+1)
+                    _subscribe.update(_subscribed)
+                    _subscribed.clear()
                 else:
                     log.info('shutdown subscriber program at %d', i+1)
                     await ws.close()
@@ -106,8 +113,10 @@ async def ping(ws):
     try:
         await ws.send('ping')
         resp = await ws.recv()
-        log.info('ping %s', resp)
-        return True
+        if resp == 'pong':
+            log.info('ping %s', resp)
+            return True
+        return False
     except Exception:
         return False
 

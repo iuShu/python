@@ -64,21 +64,25 @@ class MartinAutoBot(Subscriber):
             self.stop()
             return
 
-        # TODO trace profit
-
+        profit_price = self._order.profit_price()
         follow_price = self._order.follow_price()
         px_gap = abs(sub(self._last_px, follow_price))
-        if px_gap > FOLLOW_PX_GAP:
-            log.info('[trace] continue')
-            return
-
-        log.info('[trace-%d] prepare to place next order', self._order.index())
-        nxt = self._order.create_next()
-        if not self._place_order(nxt, ORDER_TYPE_LIMIT, px=str(nxt.px)):
-            self.stop()
-        if nxt.index() == nxt.max_order():
-            log.info('[trace] we have to stop, calm down and good lucky.')
-            self.stop()
+        if px_gap <= 10:
+            log.info('[trace] prepare to place next order for order-%d', self._order.index())
+            nxt = self._order.create_next()
+            if not self._place_order(nxt, ORDER_TYPE_LIMIT, px=str(nxt.px)):
+                self.stop()
+            if nxt.index() == nxt.max_order():
+                log.info('[trace] it\'s the last order, calm down and good lucky.')
+                self.stop()
+        elif (self._order.pos_side == POS_SIDE_SHORT and self._last_px <= profit_price) or \
+                (self._order.pos_side == POS_SIDE_LONG and self._last_px >= profit_price):
+            log.info('[trace] active algos and remove all pos')
+            log.info('[trace] ♥♥♥♥♥♥♥♥♥♥♥♥ Winner-%d ♥♥♥♥♥♥♥♥♥♥♥♥', self._order.index())
+            self._order = None
+            self.stop()     # for testing
+        else:
+            log.info('[trace] continue %f %f', profit_price, follow_price)
 
     def _place_order(self, order: MartinOrder, ord_type: str, px=''):
         o = self._client.create_order(inst_id=self._inst_id, td_mode=order.pos_type, side=order.pos_side,
@@ -121,21 +125,23 @@ class MartinAutoBot(Subscriber):
                 order.ctime = data['cTime']
                 order.utime = data['uTime']
                 self._order = order
-                log.info('[ensure] %d order filled %s', i+1, self._order)
+                log.info('[ensure] %d filled order %s', i+1, self._order)
                 return True
             elif state == STATE_CANCELED:
                 log.info('[ensure] %d order was canceled due to unknown reason, stop the bot', i+1)
                 log.info('[ensure] %d canceled order %s', i+1, order)
                 return False
             elif i+1 != ENSURE_MAX_COUNT:
+                log.info('[ensure] %d/%d waiting order be filled', i+1, ENSURE_MAX_COUNT)
                 time.sleep(ENSURE_INTERVAL / 1000)
 
         log.info('[ensure] order still not be filled, canceled order and stop the bot')
         res = self._client.cancel_order(inst_id=self._inst_id, ord_id=order.ord_id)
         data = check_resp(res)
-        if data:
+        if data and data['ordId'] == order.ord_id:
             log.info('[ensure] canceled order success %s', order)
             return True
+        log.error('[ensure] canceled order error %s', res)
         return False
 
     def _follow_algos(self) -> bool:
@@ -155,6 +161,7 @@ class MartinAutoBot(Subscriber):
             log.error('[follow] place algo resp error %s', res)
             log.error('[follow] error at place algo %s', self._order)
             return False
+        log.info('[follow] algo order placed with tp-%s sl-%s pos-%s', self._order.ord_id, tpx, spx, full_pos)
         return True
 
     def _safe_code(self, func):
