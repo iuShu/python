@@ -47,16 +47,16 @@ async def connect():
                         log.error('dispatching process error, continue')
                         continue
                 if not _shutdown_signal:
-                    log.error('subscribing error, %d reconnecting...', i+1)
+                    log.error('subscribing error, reconnecting...')
                     _subscribe.update(_subscribed)
                     _subscribed.clear()
                 else:
-                    log.info('shutdown subscriber program at %d', i+1)
+                    log.info('shutdown subscriber program')
                     await ws.close()
                     break
         except Exception:
             traceback.print_exc()
-            log.error('disconnected, %d try reconnecting...', i+1)
+            log.error('disconnected, try reconnecting...')
             _subscribe.update(_subscribed)
             _subscribed.clear()
 
