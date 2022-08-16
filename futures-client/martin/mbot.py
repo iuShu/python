@@ -76,7 +76,7 @@ class MartinAutoBot(Subscriber):
         if px_gap <= 10:
             log.info('[trace] prepare to place next order for order-%d', self._order.index())
             nxt = self._order.create_next()
-            if not self._place_order(nxt, SIDE_BUY, ORDER_TYPE_LIMIT, px=str(nxt.px)):
+            if not self._place_order(nxt, SIDE_SELL, ORDER_TYPE_LIMIT, px=str(nxt.px)):
                 self.stop()
             if nxt.index() == nxt.max_order():
                 log.info('[trace] it\'s the last order, calm down and good lucky.')
@@ -104,7 +104,9 @@ class MartinAutoBot(Subscriber):
         order.state = STATE_LIVE
         if not self._ensure_order(order):
             return False
-        return self._follow_algos()
+        if not self._follow_algos():
+            return False
+        return self._add_margin_balance()
 
     def stop(self):
         self._order = None
@@ -168,7 +170,21 @@ class MartinAutoBot(Subscriber):
             log.error('[follow] place algo resp error %s', res)
             log.error('[follow] error at place algo %s', self._order)
             return False
-        log.info('[follow] algo order placed with tp-%s sl-%s pos-%s', self._order.ord_id, tpx, spx, full_pos)
+        log.info('[follow] algo order placed with tp-%s sl-%s fpos-%s', tpx, spx, full_pos)
+        return True
+
+    def _add_margin_balance(self) -> bool:
+        emb = self._order.extra_margin_balance()
+        if not emb:
+            log.info('[balance] enough margin balance')
+            return True
+
+        res = self._client.margin_balance(inst_id=self._inst_id, pos_side=self._order.pos_side,
+                                          _type=MARGIN_BALANCE_ADD, amt=str(emb))
+        data = check_resp(res)
+        if not data or data['instId'] != self._inst_id:
+            log.error('[balance] adjust margin balance error %s', res)
+            return False
         return True
 
     def _detect_last_px(self, data):

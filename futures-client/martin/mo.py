@@ -15,6 +15,7 @@ class MartinOrder:
         self._profit_step_rate = profit_step_rate
         self._max_order = max_order
         self._index = 0
+        self._level = 100
 
         self.px = None
         self.state = None
@@ -65,10 +66,16 @@ class MartinOrder:
         check_attributes(self._profit_step_rate, 'profit-step-rate')
 
         if self.prev:
-            return self.head_order().stop_loss_price()
+            return self.prev.stop_loss_price()
         rate = self._follow_rate if self.pos_side == POS_SIDE_SHORT else (-1 * self._follow_rate)
         rate = mlt(rate, self._max_order - self._index + 1)
         return mlt(self.px, add(1.0, rate))
+
+    def extra_margin_balance(self) -> float:
+        value = div(mlt(self.px, div(self.pos, 1000)), self._level)
+        rate = mlt(mlt(self._follow_rate, self._max_order - self._index + 1), self._level)
+        emb = mlt(value, rate)
+        return 0 if value > emb else sub(emb, value)
 
     def create_next(self):
         if self._index == self._max_order:
@@ -91,6 +98,7 @@ class MartinOrder:
             while head.prev:
                 head = head.prev
             return head
+        return self
 
     def __str__(self):
         return f'{self.pos} {self.pos_type} {self.pos_side} {self._follow_rate} {self._profit_step_rate} {self._index} ' \
@@ -102,20 +110,32 @@ def check_attributes(attr, name: str):
         raise ValueError(f'{name} is {attr}')
 
 
+title = []
+
+
+def print_mo(order: MartinOrder):
+    fstr = ' '.join(['%14s' for i in range(8)])
+    if not title:
+        print(fstr % ('stop loss', 'follow px', 'price', 'profit px', 'profit rate', 'margin', 'pos', 'full pos'))
+        title.append('title')
+    print(fstr % (order.stop_loss_price(), order.follow_price(), order.px, order.profit_price(), order.profit_rate(),
+                  order.extra_margin_balance(), order.pos, order.full_pos()))
+
+
 if __name__ == '__main__':
     mo = MartinOrder(10)
     mo.state = STATE_FILLED
     mo.px = 22995.000000
-    print(mo.stop_loss_price(), mo.follow_price(), mo.px, mo.profit_price(), mo.profit_rate(), mo.index(), mo.pos, mo.full_pos())
+    print_mo(mo)
     mo = mo.create_next()
-    print(mo.stop_loss_price(), mo.follow_price(), mo.px, mo.profit_price(), mo.profit_rate(), mo.index(), mo.pos, mo.full_pos())
+    print_mo(mo)
     mo = mo.create_next()
-    print(mo.stop_loss_price(), mo.follow_price(), mo.px, mo.profit_price(), mo.profit_rate(), mo.index(), mo.pos, mo.full_pos())
+    print_mo(mo)
     mo = mo.create_next()
-    print(mo.stop_loss_price(), mo.follow_price(), mo.px, mo.profit_price(), mo.profit_rate(), mo.index(), mo.pos, mo.full_pos())
+    print_mo(mo)
     mo = mo.create_next()
-    print(mo.stop_loss_price(), mo.follow_price(), mo.px, mo.profit_price(), mo.profit_rate(), mo.index(), mo.pos, mo.full_pos())
+    print_mo(mo)
     mo = mo.create_next()
-    print(mo.stop_loss_price(), mo.follow_price(), mo.px, mo.profit_price(), mo.profit_rate(), mo.index(), mo.pos, mo.full_pos())
+    print_mo(mo)
     mo = mo.create_next()
     print(mo)

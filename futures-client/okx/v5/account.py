@@ -260,3 +260,12 @@ class Account(Client):
     def market_ticker(self, inst_id: str):
         return self._request_with_params(GET, MARKET_TICKER, {'instId': inst_id})
 
+    def margin_balance(self, inst_id: str, pos_side: str, _type: str, amt: str, ccy='', auto='', loan_trans=''):
+        params = {'instId': inst_id, 'posSide': pos_side, 'type': _type, 'amt': amt}
+        if ccy:
+            params['ccy'] = ccy
+        if auto:
+            params['auto'] = auto
+        if loan_trans:
+            params['loanTrans'] = loan_trans
+        return self._request_with_params(POST, MARGIN_BALANCE, params)

@@ -36,6 +36,7 @@ SIDE_SELL = 'sell'
 # position side
 POS_SIDE_LONG = 'long'
 POS_SIDE_SHORT = 'short'
+POS_SIDE_NET = 'net'
 
 # td mode
 TD_MODE_CROSS = 'cross'
@@ -76,6 +77,10 @@ STATE_FILLED = 'filled'
 STATE_PARTIALLY_FILLED = 'partially_filled'
 STATE_LIVE = 'live'
 
+# margin balance operation type
+MARGIN_BALANCE_ADD = 'add'
+MARGIN_BALANCE_REDUCE = 'reduce'
+
 # public
 SERVER_TIMESTAMP_URL = '/api/v5/public/time'
 MARKET_CANDLE = '/api/v5/market/candles'
@@ -87,6 +92,7 @@ ACCOUNT_BALANCE = '/api/v5/account/balance'
 ASSET_BALANCE = '/api/v5/asset/balances'
 ACCOUNT_LEVERAGE = '/api/v5/account/leverage-info'
 ACCOUNT_SET_LEVERAGE = '/api/v5/account/set-leverage'
+MARGIN_BALANCE = '/api/v5/account/position/margin-balance'
 
 # trade
 PLACE_ORDER = '/api/v5/trade/order'
