@@ -1,8 +1,8 @@
 from statistics import mean
-
+from logger import log
 from martin.strategy.core import Strategy
 from okx.v5.consts import POS_SIDE_SHORT, INST_BTC_USDT_SWAP
-from okx.v5.utils import log, check_resp
+from okx.v5.utils import check_resp
 
 CLOSE_PX_INDEX = 4
 MAX_REPO_TIMES = 5
@@ -46,7 +46,7 @@ class SimpleMAStrategy(Strategy):
 
         close_pxs = [float(r[4]) for r in self._repo[-self._duration:]]
         avg = mean(close_pxs)
-        log.info('[strategy] %f %f %s', avg, px, close_pxs)
+        log.debug('[strategy] %f %f %s', avg, px, close_pxs)
         if self._pos_side == POS_SIDE_SHORT:
             return avg > px
         return avg < px

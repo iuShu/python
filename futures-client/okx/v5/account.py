@@ -170,7 +170,7 @@ class Account(Client):
         if ccy:
             params['ccy'] = ccy
         if auto_cancel:
-            params['autoCxl'] = auto_cancel
+            params['autoCxl'] = 'true'
         return self._request_with_params(POST, CLOSE_POSITION, params)
 
     def get_algo_order_pending(self, algo_type: str, inst_type='', inst_id='', algo_id='', before='', after='', limit=''):

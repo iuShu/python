@@ -1,7 +1,5 @@
-import traceback
-
+from logger import log
 from okx.v5 import stream
-from okx.v5.utils import log
 
 
 class Subscriber:
@@ -28,7 +26,7 @@ class Subscriber:
             stream.register(self)
             stream.startup()
         except Exception:
-            traceback.print_exc()
+            log.error('[subscriber] startup error', exc_info=True)
             self._running = False
 
     def shutdown(self):

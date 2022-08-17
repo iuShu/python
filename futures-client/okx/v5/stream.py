@@ -1,14 +1,13 @@
 import asyncio
 import datetime
 import json
-import traceback
+from logger import log
 from asyncio.exceptions import TimeoutError
 
 import websockets
 from websockets.exceptions import ConnectionClosedError
 
 from okx.v5.consts import *
-from okx.v5.utils import log
 
 _subscribers = []
 _subscribe = dict()
@@ -28,13 +27,13 @@ async def connect():
                         res = await asyncio.wait_for(ws.recv(), timeout=30)
                         log.debug('<< %s', res)
                     except ConnectionClosedError:
-                        log.warning('IncompleteReadError caused this error, try re-connect')
+                        log.warning('IncompleteReadError caused this error, try re-connect', exc_info=True)
                         break
                     except TimeoutError:
-                        log.warning('CancelledError caused a timeout error, try continue')
+                        log.warning('CancelledError caused a timeout error, try continue', exc_info=True)
                         continue
                     except Exception:
-                        traceback.print_exc()
+                        log.error('recv error', exc_info=True)
                         if await ping(ws):
                             log.warning('occurred error but ping ok, continue')
                             continue
@@ -43,8 +42,7 @@ async def connect():
                     try:
                         await dispatching(res)
                     except Exception:
-                        traceback.print_exc()
-                        log.error('dispatching process error, continue')
+                        log.error('dispatching process error, continue', exc_info=True)
                         continue
                 if not _shutdown_signal:
                     log.error('subscribing error, reconnecting...')
@@ -55,8 +53,7 @@ async def connect():
                     await ws.close()
                     break
         except Exception:
-            traceback.print_exc()
-            log.error('disconnected, try reconnecting...')
+            log.error('disconnected, try reconnecting...', exc_info=True)
             _subscribe.update(_subscribed)
             _subscribed.clear()
 
@@ -106,7 +103,7 @@ async def handle_recv(resp):
         for s in _subscribers:
             s.on_data(resp)
     except Exception:
-        traceback.print_exc()
+        log.error('handle recv error', exc_info=True)
 
 
 async def ping(ws):

@@ -1,5 +1,7 @@
 import time
-import traceback
+
+import logger
+from logger import log
 
 from martin.mo import MartinOrder
 from martin.strategy.simple import SimpleMAStrategy
@@ -8,7 +10,7 @@ from config.api_config import conf
 
 from okx.v5.subscriber import Subscriber
 from okx.v5.account import Account
-from okx.v5.utils import log, check_resp
+from okx.v5.utils import check_resp
 from okx.v5.consts import *
 
 
@@ -36,8 +38,6 @@ class MartinAutoBot(Subscriber):
             log.warning('bot already stop')
             return
 
-        # TODO check whether the program running time would affect the speed of data handling
-
         # handle candle data
         if channel.startswith('candle'):
             self._strategy.feed(data)
@@ -51,13 +51,12 @@ class MartinAutoBot(Subscriber):
             else:
                 self._initial()
         except Exception:
-            traceback.print_exc()
-            log.error('handle data error')
+            log.error('handle data error', exc_info=True)
             self.stop()
 
     def _initial(self):
         if not self._strategy.can_execute(self._last_px):
-            log.info('[initial] not a good point')
+            log.debug('[initial] not a good point')
             return
 
         order = MartinOrder(START_POS_NUM)
@@ -85,10 +84,11 @@ class MartinAutoBot(Subscriber):
                 (self._order.pos_side == POS_SIDE_LONG and self._last_px >= profit_price):
             log.info('[trace] active algos and remove all pos')
             log.info('[trace] ♥♥♥♥♥♥♥♥♥♥♥♥ Winner-%d ♥♥♥♥♥♥♥♥♥♥♥♥', self._order.index())
+            self._close_all()   # close all position (prevent the algo order not be filled)
             self._order = None
-            self.stop()     # for testing
+            self.stop()         # for testing
         else:
-            log.info('[trace] continue %f %f', profit_price, follow_price)
+            log.debug('[trace] continue %f %f', profit_price, follow_price)
 
     def _place_order(self, order: MartinOrder, side: str, ord_type: str, px=''):
         o = self._client.create_order(inst_id=self._inst_id, td_mode=order.pos_type, side=side, pos_side=order.pos_side,
@@ -102,11 +102,12 @@ class MartinAutoBot(Subscriber):
 
         order.ord_id = data['ordId']
         order.state = STATE_LIVE
-        if not self._ensure_order(order):
+        log.info('[place] place an order at %f/%d', self._last_px, self._order.pos)
+        if not self._ensure_order(order):   # ensure order be filled
             return False
-        if not self._follow_algos():
+        if not self._follow_algos():        # place algo order
             return False
-        return self._add_margin_balance()
+        return self._add_margin_balance()   # add extra margin balance
 
     def stop(self):
         self._order = None
@@ -133,21 +134,21 @@ class MartinAutoBot(Subscriber):
                 order.ctime = data['cTime']
                 order.utime = data['uTime']
                 self._order = order
-                log.info('[ensure] %d filled order %s', i+1, self._order)
+                log.info('[ensure] ck-%d order has been filled (%s)', i+1, self._order)
                 return True
             elif state == STATE_CANCELED:
-                log.info('[ensure] %d order was canceled due to unknown reason, stop the bot', i+1)
-                log.info('[ensure] %d canceled order %s', i+1, order)
+                log.info('[ensure] ck-%d order has been canceled due to unknown reason, stop the bot', i+1)
+                log.info('[ensure] ck-%d canceled order (%s)', i+1, order)
                 return False
             elif i+1 != ENSURE_MAX_COUNT:
-                log.info('[ensure] %d/%d waiting order be filled', i+1, ENSURE_MAX_COUNT)
+                log.info('[ensure] ck-%d/%d waiting order to be filled', i+1, ENSURE_MAX_COUNT)
                 time.sleep(ENSURE_INTERVAL / 1000)
 
         log.info('[ensure] order still not be filled, canceled order and stop the bot')
         res = self._client.cancel_order(inst_id=self._inst_id, ord_id=order.ord_id)
         data = check_resp(res)
         if data and data['ordId'] == order.ord_id:
-            log.info('[ensure] canceled order success %s', order)
+            log.info('[ensure] canceled order success (%s)', order)
             return True
         log.error('[ensure] canceled order error %s', res)
         return False
@@ -170,7 +171,7 @@ class MartinAutoBot(Subscriber):
             log.error('[follow] place algo resp error %s', res)
             log.error('[follow] error at place algo %s', self._order)
             return False
-        log.info('[follow] algo order placed with tp-%s sl-%s fpos-%s', tpx, spx, full_pos)
+        log.info('[follow] algo order placed with tp-%s sl-%s fp-%s', tpx, spx, full_pos)
         return True
 
     def _add_margin_balance(self) -> bool:
@@ -185,7 +186,17 @@ class MartinAutoBot(Subscriber):
         if not data or data['instId'] != self._inst_id:
             log.error('[balance] adjust margin balance error %s', res)
             return False
+        log.info('[balance] added extra margin balance %f', emb)
         return True
+
+    def _close_all(self):
+        res = self._client.close_position(inst_id=self._inst_id, pos_side=self._order.pos_side,
+                                          mgn_mode=self._order.pos_type, auto_cancel=True)
+        data = check_resp(res)
+        if not data:
+            log.error('[close] close failed: %s', res)
+        else:
+            log.info('[close] close all position at %f', self._last_px)
 
     def _detect_last_px(self, data):
         if not data:
@@ -197,7 +208,7 @@ class MartinAutoBot(Subscriber):
             if t > ts:
                 px = float(d['last'])
         self._last_px = px
-        log.info('[update] px %f', self._last_px)
+        log.info('[debug] px %f', self._last_px)
 
     @staticmethod
     def _init_client():
@@ -206,8 +217,9 @@ class MartinAutoBot(Subscriber):
 
 
 if __name__ == '__main__':
-    bot = MartinAutoBot(INST_BTC_USDT_SWAP)
-    bot.startup()
+    # bot = MartinAutoBot(INST_BTC_USDT_SWAP)
+    # bot.startup()
+    log.info('hello')
 
 
 

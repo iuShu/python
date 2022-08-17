@@ -1,11 +1,9 @@
 import random
 import time
-import traceback
-
+from logger import log
 from okx.v5.subscriber import Subscriber
 from okx.v5.account import Account
 from okx.v5.consts import *
-from okx.v5.utils import log
 
 from config.api_config import conf
 from core.utils import sub
@@ -41,12 +39,12 @@ class MockAutoBot(Subscriber):
             else:
                 self._initial()
         except Exception:
-            traceback.print_exc()
+            log.error('[mock] handle recv error', exc_info=True)
             self.stop()
 
     def _initial(self):
         if not self._strategy.can_execute(self._last_px):
-            log.info('[initial] not a good point')
+            log.debug('[initial] not a good point')
             return
 
         order = MartinOrder(10)
@@ -72,7 +70,7 @@ class MockAutoBot(Subscriber):
                 self.stop()
             return
         else:
-            log.info('[trace] continue %f %f', profit_price, follow_price)
+            log.debug('[trace] continue %f %f', profit_price, follow_price)
 
         if (self._order.pos_side == POS_SIDE_SHORT and self._last_px <= profit_price) or \
                 (self._order.pos_side == POS_SIDE_LONG and self._last_px >= profit_price):
@@ -112,7 +110,7 @@ class MockAutoBot(Subscriber):
             if t > ts:
                 px = float(d['last'])
         self._last_px = px
-        log.info('[update] px %f', self._last_px)
+        log.debug('[update] px %f', self._last_px)
 
     @staticmethod
     def _init_client():
