@@ -20,6 +20,7 @@ class MartinOrder:
         self.px = None
         self.state = None
         self.ord_id = None
+        self.algo_id = None
         self.ctime = None
         self.utime = None
 

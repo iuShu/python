@@ -48,8 +48,14 @@ class SimpleMAStrategy(Strategy):
         avg = mean(close_pxs)
         log.debug('[strategy] %f %f %s', avg, px, close_pxs)
         if self._pos_side == POS_SIDE_SHORT:
-            return avg > px
-        return avg < px
+            if avg > px:
+                log.info('[strategy] %f %f %s', avg, px, close_pxs)
+                return True
+            return False
+        if avg < px:
+            log.info('[strategy] %f %f %s', avg, px, close_pxs)
+            return True
+        return False
 
     def duration(self) -> int:
         return self._duration

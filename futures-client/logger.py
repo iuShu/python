@@ -9,7 +9,7 @@ class CustomHandler(FileHandler):
     def __init__(self, filename, mode='a', encoding=None, delay=False, errors=None):
         FileHandler.__init__(self, filename, mode, encoding, delay, errors)
         self._stdout = sys.stdout
-        self.formatter = Formatter(fmt='%(asctime)s %(levelname)s %(filename)s[line:%(lineno)d] %(message)s')
+        self.formatter = Formatter(fmt='%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s')
 
     def emit(self, record: logging.LogRecord) -> None:
         if record.name == 'websockets.client':
