@@ -27,10 +27,10 @@ async def connect():
                         res = await asyncio.wait_for(ws.recv(), timeout=30)
                         log.debug('<< %s', res)
                     except ConnectionClosedError:
-                        log.warning('IncompleteReadError caused this error, try re-connect', exc_info=True)
+                        log.warning('IncompleteReadError caused this error, try re-connect')
                         break
                     except TimeoutError:
-                        log.warning('CancelledError caused a timeout error, try continue', exc_info=True)
+                        log.warning('CancelledError caused a timeout error, try continue')
                         continue
                     except Exception:
                         log.error('recv error', exc_info=True)
@@ -134,7 +134,7 @@ def register(subscriber):
 def startup():
     _shutdown_signal.clear()
     # add_channel('tickers', INST_BTC_USDT_SWAP)
-    add_channel('candle1m', INST_BTC_USDT_SWAP)
+    # add_channel('candle1m', INST_BTC_USDT_SWAP)
     asyncio.run(connect())
 
 
@@ -168,4 +168,3 @@ def _channel_key(channel: str, inst_id: str):
 
 if __name__ == '__main__':
     startup()
-

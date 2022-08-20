@@ -9,7 +9,7 @@ from martin.mo import MartinOrder
 from martin.strategy.simple import SimpleMAStrategy
 
 
-class MockAutoBot(Engine):
+class ReverseMockAutoBot(Engine):
 
     def __init__(self):
         Engine.__init__(self)
@@ -113,6 +113,8 @@ class MockAutoBot(Engine):
 
 
 if __name__ == '__main__':
+    from martin.mock import MockAutoBot
     se = SubscriberEngine()
     se.add_engine(MockAutoBot())
+    se.add_engine(ReverseMockAutoBot())
     se.startup()

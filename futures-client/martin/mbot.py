@@ -85,8 +85,7 @@ class MartinAutoBot(Subscriber):
             log.info('[trace] active algos and remove all pos')
             log.info('[trace] ♥♥♥♥♥♥♥♥♥♥♥♥ Winner-%d ♥♥♥♥♥♥♥♥♥♥♥♥', self._order.index())
             self._close_all()   # close all position (prevent the algo order not be filled)
-            self._order = None
-            self.stop()         # for testing
+            self._order = None  # start next
         else:
             log.debug('[trace] continue %f %f', profit_price, follow_price)
 
@@ -102,9 +101,11 @@ class MartinAutoBot(Subscriber):
 
         order.ord_id = data['ordId']
         order.state = STATE_LIVE
-        log.info('[place] place an order at %f/%d', self._last_px, self._order.pos)
+        log.info('[place] place an order at %f/%d', self._last_px, order.pos)
         if not self._ensure_order(order):   # ensure order be filled
-            return False
+            if not self._order:
+                return False    # first order not be filled
+            return True         # follow order not be filled
         if not self._follow_algos():        # place algo order
             return False
         return self._add_margin_balance()   # add extra margin balance
@@ -208,7 +209,7 @@ class MartinAutoBot(Subscriber):
             if t > ts:
                 px = float(d['last'])
         self._last_px = px
-        log.info('[debug] px %f', self._last_px)
+        log.debug('px %f', self._last_px)
 
     @staticmethod
     def _init_client():
@@ -217,9 +218,8 @@ class MartinAutoBot(Subscriber):
 
 
 if __name__ == '__main__':
-    # bot = MartinAutoBot(INST_BTC_USDT_SWAP)
-    # bot.startup()
-    log.info('hello')
+    bot = MartinAutoBot(INST_BTC_USDT_SWAP)
+    bot.startup()
 
 
 
