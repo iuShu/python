@@ -18,7 +18,7 @@ from okx.v5.consts import *
 
 START_POS_NUM = 10          # equals to 0.01 BTC
 FOLLOW_PX_GAP = 10          # 10 USDT
-CONFIRM_INTERVAL = 3        # second
+CONFIRM_INTERVAL = 2        # second
 
 
 class MartinAutoBot(Subscriber):
@@ -51,7 +51,7 @@ class MartinAutoBot(Subscriber):
 
             if self._order:
                 self._trace()
-            else:
+            elif not self._pending:
                 self._initial()
 
             if not self._pending:
@@ -165,6 +165,7 @@ class MartinAutoBot(Subscriber):
             if not data:
                 log.error('[follow] error at cancel previous algo-%d', prev.index())
                 return False
+            log.info('[follow] cancel previous algo with tp-%f sl-%f', prev.profit_price(), prev.stop_loss_price())
 
         tpx = str(self._order.profit_price())
         spx = str(self._order.stop_loss_price())
