@@ -120,7 +120,7 @@ class MartinAutoBot(Subscriber):
             if self._pending:   # follow order already placed
                 return
 
-            log.info('[trace] place next for ord-%d at px-%f', self._order.index(), self._last_px)
+            log.info('[trace] place next for ord-%d at px-%f', self._order.index(), follow_price)
             nxt = self._order.create_next()
             if not self._place_order(nxt, SIDE_SELL, ORDER_TYPE_LIMIT, px=str(nxt.px)):
                 self.stop()
@@ -159,7 +159,7 @@ class MartinAutoBot(Subscriber):
             return False
 
         prev = self._order.prev
-        if not prev:    # cancel previous algo order
+        if prev:    # cancel previous algo order
             res = self._client.cancel_algo_oco(self._inst_id, algo_ids=[prev.algo_id])
             data = check_resp(res)
             if not data:

@@ -10,9 +10,10 @@ def train():
     # balance = account.get_account_balance('USDT')
     # print(balance)
 
-    # orders = account.get_order_history(INST_TYPE_SWAP, limit=5)
-    # print(orders)
+    orders = account.get_order_history(inst_type=INST_TYPE_SWAP, inst_id=INST_BTC_USDT_SWAP, limit=5)
+    print(orders)
 
+    # detail = account.get_order_detail(inst_type=INST_TYPE_SWAP)
     # detail = account.get_order_detail_archive(inst_type=INST_TYPE_SWAP, ord_id='473073320380993536')
     # print(detail)
 
@@ -49,8 +50,8 @@ def train():
     # last_px = ticker['data'][0]['last']
 
     from strategy.simple import SimpleMAStrategy
-    candles = account.get_candles(INST_BTC_USDT_SWAP, bar='1m', limit=11)
-    print(candles)
+    # candles = account.get_candles(INST_BTC_USDT_SWAP, bar='1m', limit=11)
+    # print(candles)
 
     # stg = SimpleMAStrategy()
     # print(stg.can_execute(last_px, candles['data']))
