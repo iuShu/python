@@ -83,10 +83,11 @@ class MartinOrder:
             return None
 
         nxt: MartinOrder = copy.deepcopy(self)
+        nxt.prev, nxt.next = None, None     # reset
         nxt._index += 1
         nxt.px = self.follow_price()
         nxt.pos = self.pos * 2
-        nxt.state = STATE_FILLED    # revert to None
+        nxt.state = None
         nxt.ctime = None
         nxt.utime = None
         nxt.prev = self

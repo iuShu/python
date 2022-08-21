@@ -150,7 +150,7 @@ class MartinAutoBot(Subscriber):
 
         order.ord_id = data['ordId']
         order.state = STATE_LIVE
-        log.info('[place] placed an market-price order with pos-%d', order.pos)
+        log.info('[place] placed an %s-price order with pos-%d', ord_type, order.pos)
         self._pending = order
         return True
 
@@ -175,7 +175,6 @@ class MartinAutoBot(Subscriber):
         algo = self._client.create_algo_oco(inst_id=self._inst_id, td_mode=self._order.pos_type,
                                             algo_type=ALGO_TYPE_OCO, side=side, sz=full_pos,
                                             tp_tri_px=tpx, sl_tri_px=spx, pos_side=self._order.pos_side)
-        log.info('[follow] prepare algo: ', algo)
         res = self._client.place_algo_oco(algo)
         data = check_resp(res)
         if not data:
