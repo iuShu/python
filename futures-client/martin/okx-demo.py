@@ -10,8 +10,8 @@ def train():
     # balance = account.get_account_balance('USDT')
     # print(balance)
 
-    orders = account.get_order_history(inst_type=INST_TYPE_SWAP, inst_id=INST_BTC_USDT_SWAP, limit=5)
-    print(orders)
+    # orders = account.get_order_history(inst_type=INST_TYPE_SWAP, inst_id=INST_BTC_USDT_SWAP, limit=5)
+    # print(orders)
 
     # detail = account.get_order_detail(inst_type=INST_TYPE_SWAP)
     # detail = account.get_order_detail_archive(inst_type=INST_TYPE_SWAP, ord_id='473073320380993536')
@@ -28,6 +28,13 @@ def train():
 
     # algo_history = account.get_algo_order_history(algo_type=ALGO_TYPE_OCO, inst_type=INST_TYPE_SWAP, state=ALGO_STATE_EFFECTIVE)
     # print(algo_history)
+
+    ao = account.create_algo_oco(inst_id=INST_BTC_USDT_SWAP, td_mode=TD_MODE_ISOLATE, side=SIDE_BUY,
+                                 algo_type=ALGO_TYPE_OCO, sz='30', pos_side=POS_SIDE_SHORT,
+                                 tp_tri_px='21273.962400', sl_tri_px='21872.025600')
+    res = account.place_algo_oco(ao)
+    print(ao)
+    print(res)
 
     # config = account.get_account_config()
     # print(config)

@@ -1,6 +1,5 @@
 import copy
 import logging
-import threading
 import time
 
 from logger import log
@@ -116,7 +115,7 @@ class MartinAutoBot(Subscriber):
         profit_price = self._order.profit_price()
         follow_price = self._order.follow_price()
         px_gap = abs(sub(self._last_px, follow_price))
-        if px_gap <= 10:
+        if px_gap <= FOLLOW_PX_GAP:
             if self._pending:   # follow order already placed
                 return
 
@@ -128,6 +127,8 @@ class MartinAutoBot(Subscriber):
                 log.info('[trace] it\'s the last order, calm down and good lucky.')
                 self.stop()
                 # TODO stop directly ?
+        elif px_gap > (FOLLOW_PX_GAP * 2) and self._pending:
+            self._cancel_pending()
         elif (self._order.pos_side == POS_SIDE_SHORT and self._last_px <= profit_price) or \
                 (self._order.pos_side == POS_SIDE_LONG and self._last_px >= profit_price):
             log.info('[trace] active algos and remove all pos')
@@ -174,11 +175,12 @@ class MartinAutoBot(Subscriber):
         algo = self._client.create_algo_oco(inst_id=self._inst_id, td_mode=self._order.pos_type,
                                             algo_type=ALGO_TYPE_OCO, side=side, sz=full_pos,
                                             tp_tri_px=tpx, sl_tri_px=spx, pos_side=self._order.pos_side)
+        log.info('[follow] prepare algo: ', algo)
         res = self._client.place_algo_oco(algo)
         data = check_resp(res)
         if not data:
             log.error('[follow] place algo resp error %s', res)
-            log.error('[follow] error at place algo %s', self._order)
+            log.error('[follow] error at place algo tp-%s sl-%s fp-%s', tpx, spx, full_pos)
             return False
         log.info('[follow] algo order placed with tp-%s sl-%s fp-%s', tpx, spx, full_pos)
         self._order.algo_id = data['algoId']
@@ -198,6 +200,15 @@ class MartinAutoBot(Subscriber):
             return False
         log.info('[balance] added extra margin balance %f', emb)
         return True
+
+    def _cancel_pending(self):
+        res = self._client.cancel_order(inst_id=self._inst_id, ord_id=self._pending.ord_id)
+        data = check_resp(res)
+        if not data:
+            log.error('[cancel] error at cancel pending order (%s)', self._pending)
+        else:
+            log.info('[cancel] cancel pending order %s', self._pending.ord_id)
+            self._pending = None
 
     def _close_all(self):
         res = self._client.close_position(inst_id=self._inst_id, pos_side=self._order.pos_side,
