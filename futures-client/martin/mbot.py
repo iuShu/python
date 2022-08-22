@@ -131,8 +131,7 @@ class MartinAutoBot(Subscriber):
             self._cancel_pending()
         elif (self._order.pos_side == POS_SIDE_SHORT and self._last_px <= profit_price) or \
                 (self._order.pos_side == POS_SIDE_LONG and self._last_px >= profit_price):
-            log.info('[trace] active algos and remove all pos')
-            log.info('[trace] ♥♥♥♥♥♥♥♥♥♥♥♥ Winner-%d ♥♥♥♥♥♥♥♥♥♥♥♥', self._order.index())
+            log.info('[trace] ############ Winner-%s ############', self._order.index())
             self._close_all()       # close all position (prevent the algo order not be filled)
             # TODO cold down strategy ?
         else:
