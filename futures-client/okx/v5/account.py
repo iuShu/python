@@ -1,11 +1,21 @@
+from logger import log
 from .client import Client
 from .consts import *
+
+MAX_RETRY_TIMES = 5
 
 
 class Account(Client):
 
     def __init__(self, api_key, api_secret_key, passphrase, use_server_time=False, test=False, first=False):
         Client.__init__(self, api_key, api_secret_key, passphrase, use_server_time, test, first)
+
+    def _request(self, method, request_path, params, cursor=False):
+        for i in range(MAX_RETRY_TIMES):
+            try:
+                return Client._request(self, method, request_path, params, cursor)
+            except Exception:
+                log.info('request fail, %d retry', i+1, exc_info=True)
 
     def get_account_config(self):
         return self._request_without_params(GET, ACCOUNT_CONFIG)
