@@ -255,7 +255,7 @@ class Account(Client):
             params.append({'instId': inst_id, 'algoId': algo})
         return self._request_with_params(POST, CANCEL_ALGO_ORDER, params)
 
-    def get_candles(self, inst_id: str, bar=BAR_15M, before='', after='', limit=''):
+    def get_candles(self, inst_id: str, bar=BAR_15M, before='', after='', limit='', history=False):
         params = {'instId': inst_id}
         if bar:
             params['bar'] = bar
@@ -265,7 +265,10 @@ class Account(Client):
             params['after'] = after
         if limit:
             params['limit'] = limit
-        return self._request_with_params(GET, MARKET_CANDLE, params)
+        if history:
+            return self._request_with_params(GET, MARKET_CANDLE_HISTORY, params)
+        else:
+            return self._request_with_params(GET, MARKET_CANDLE, params)
 
     def market_ticker(self, inst_id: str):
         return self._request_with_params(GET, MARKET_TICKER, {'instId': inst_id})

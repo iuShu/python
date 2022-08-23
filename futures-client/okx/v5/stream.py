@@ -1,6 +1,8 @@
 import asyncio
 import datetime
 import json
+import time
+
 from logger import log
 from asyncio.exceptions import TimeoutError
 
@@ -167,4 +169,8 @@ def _channel_key(channel: str, inst_id: str):
 
 
 if __name__ == '__main__':
-    startup()
+    # startup()
+    # lt = time.localtime(1640966400000 / 1000)
+    lt = time.localtime(1653235200000 / 1000)
+    # lt = time.localtime(1661269740000 / 1000)
+    print(time.asctime(lt))

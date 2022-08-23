@@ -91,6 +91,7 @@ def insert_batch(table: str, col_values: tuple):
     except Exception:
         conn.rollback()
         traceback.print_exc()
+        return -1
     finally:
         conn.close()
 

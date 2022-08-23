@@ -50,6 +50,8 @@ def signature(timestamp, method, request_path, body, secret_key):
 
 
 def check_resp(raw: dict, multiple=False):
+    if not raw:
+        return None
     if 'code' in raw and raw['code'] != '0':
         return None
     if 'data' not in raw:

@@ -84,6 +84,7 @@ MARGIN_BALANCE_REDUCE = 'reduce'
 # public
 SERVER_TIMESTAMP_URL = '/api/v5/public/time'
 MARKET_CANDLE = '/api/v5/market/candles'
+MARKET_CANDLE_HISTORY = '/api/v5/market/history-candles'
 MARKET_TICKER = '/api/v5/market/ticker'
 
 # account
