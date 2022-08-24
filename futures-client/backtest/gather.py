@@ -1,6 +1,7 @@
+import datetime
 import time
 
-from backtest.database import insert_batch
+from backtest.database import insert_batch, query
 from config.api_config import conf, db_conf
 from okx.v5.account import Account
 from okx.v5.consts import INST_BTC_USDT_SWAP, BAR_1M
@@ -15,6 +16,12 @@ def client():
 def gather():
     cli = client()
     ts = ''
+    table = 'swap_btc_usdt_candle1m'
+    rows = query(f'select * from {table} order by ts limit 1')
+    if rows:
+        ts = str(int(rows[0][1].timestamp() * 1000))
+        print('start from', rows[0][1].ctime())
+
     while True:
         res = cli.get_candles(inst_id=INST_BTC_USDT_SWAP, bar=BAR_1M, after=ts, history=True, limit=100)
         data = check_resp(res, True)

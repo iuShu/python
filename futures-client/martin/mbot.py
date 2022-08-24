@@ -17,7 +17,7 @@ from okx.v5.consts import *
 
 START_POS_NUM = 10          # equals to 0.01 BTC
 FOLLOW_PX_GAP = 10          # 10 USDT
-CONFIRM_INTERVAL = 2        # second
+CONFIRM_INTERVAL = 1        # second
 
 
 class MartinAutoBot(Subscriber):
@@ -131,8 +131,8 @@ class MartinAutoBot(Subscriber):
             self._cancel_pending()
         elif (self._order.pos_side == POS_SIDE_SHORT and self._last_px <= profit_price) or \
                 (self._order.pos_side == POS_SIDE_LONG and self._last_px >= profit_price):
-            log.info('[trace] ############ Winner-%s ############', self._order.index())
-            self._close_all()       # close all position (prevent the algo order not be filled)
+            self._ensure_close()
+            # self._close_all()       # close all position (prevent the algo order not be filled)
             # TODO cold down strategy ?
         else:
             log.debug('[trace] continue %f %f', profit_price, follow_price)
@@ -200,15 +200,31 @@ class MartinAutoBot(Subscriber):
         return True
 
     def _cancel_pending(self):
+        res = self._client.get_order_info(inst_id=self._inst_id, ord_id=self._pending.ord_id)
+        data = check_resp(res)
+        if not data:
+            log.error('[cancel] error at get order info (%s)', self._pending)
+            return
+        elif data['state'] == STATE_FILLED:
+            log.info('[cancel] pending order has been filled at %s', data['fillPx'])
+            self._pending.state = STATE_FILLED
+            self._pending.px = float(data['fillPx'])
+            self._pending.ctime = data['cTime']
+            self._pending.utime = data['uTime']
+            self._order = copy.deepcopy(self._pending)
+            self._pending = None
+            log.info('[cancel] pending order has been filled (%s)', self._order)
+            return
+
         res = self._client.cancel_order(inst_id=self._inst_id, ord_id=self._pending.ord_id)
         data = check_resp(res)
         if not data:
             log.error('[cancel] error at cancel pending order (%s)', self._pending)
         else:
-            log.info('[cancel] cancel pending order %s', self._pending.ord_id)
+            log.info('[cancel] cancel pending order at %s', self._pending.px)
             self._pending = None
 
-    def _close_all(self):
+    def _close_all(self):   # deprecated
         res = self._client.close_position(inst_id=self._inst_id, pos_side=self._order.pos_side,
                                           mgn_mode=self._order.pos_type, auto_cancel=True)
         data = check_resp(res)
@@ -229,6 +245,24 @@ class MartinAutoBot(Subscriber):
         self._order = None          # start next
         self._pending = None        # clear unfilled order
         log.info('[trace] Let\'s go next')
+
+    def _ensure_close(self):
+        log.info('[ensure] ensure order filled with pnl')
+        res = self._client.get_order_info(inst_id=self._inst_id, ord_id=self._order.ord_id)
+        data = check_resp(res)
+        if not data:
+            log.error('[ensure] error at get order info (%s)', self._order)
+            return
+        elif data['state'] == STATE_FILLED:
+            pnl = float(data['pnl'])
+            if pnl > 0:
+                log.info('[ensure] ############ Winner-%s ############', self._order.index())
+                log.info('[ensure] order-%d closed at px-%s with pnl-%s', self._order.index(), data['fillPx'], pnl)
+                self._order = None
+                self._pending = None
+            else:
+                log.warning('[ensure] order-%d closed at px-%s with pnl-%s', self._order.index(), data['fillPx'], pnl)
+                self.stop()
 
     def stop(self):
         self._order = None

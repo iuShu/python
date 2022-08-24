@@ -2,17 +2,52 @@ import traceback
 
 from config.api_config import db_conf
 import pymysql
+from pymysql.connections import Connection
 
 DEFAULT_DB_TYPE = 'mysql'
 COLUMN_CACHE = dict()
 
 
-def connect(db_type=DEFAULT_DB_TYPE):
+class Conn:
+
+    def __init__(self, conn: Connection):
+        self._conn = conn
+        self._active = True
+        self._finish = True
+
+    def cursor(self, cursor=None):
+        if not self._active:
+            raise RuntimeError('connection has been closed')
+        self._finish = False
+        return self._conn.cursor(cursor)
+
+    def commit(self):
+        if not self._active:
+            raise RuntimeError('connection has been closed')
+        self._conn.commit()
+        self._finish = True
+
+    def rollback(self):
+        if not self._active:
+            raise RuntimeError('connection has been closed')
+        self._conn.rollback()
+        self._finish = True
+
+    def close(self):
+        if self._active:
+            self._conn.close()
+            self._active = False
+
+
+def connect(db_type=DEFAULT_DB_TYPE) -> Conn:
     try:
         info = db_conf(db_type)
-        return pymysql.connect(**info)
+        return Conn(pymysql.connect(**info))
     except Exception:
         traceback.print_exc()
+
+
+DEF_CONN = connect()
 
 
 def table_columns(table: str):
@@ -42,19 +77,17 @@ def columns_name(table: str, with_id=False) -> list:
 
 
 def query(sql: str, args=None):
-    conn = connect()
+    conn = DEF_CONN
     try:
         cursor = conn.cursor()
         cursor.execute(sql, args)
         return cursor.fetchall()
     except Exception:
         return None
-    finally:
-        conn.close()
 
 
 def insert(table: str, col_values: tuple, new_id=False):
-    conn = connect()
+    conn = DEF_CONN
     try:
         cols = columns_name(table)
         columns = ','.join(cols)
@@ -70,12 +103,10 @@ def insert(table: str, col_values: tuple, new_id=False):
     except Exception:
         conn.rollback()
         traceback.print_exc()
-    finally:
-        conn.close()
 
 
 def insert_batch(table: str, col_values: tuple):
-    conn = connect()
+    conn = DEF_CONN
     try:
         cols = columns_name(table)
         columns = ','.join(cols)
@@ -92,8 +123,6 @@ def insert_batch(table: str, col_values: tuple):
         conn.rollback()
         traceback.print_exc()
         return -1
-    finally:
-        conn.close()
 
 
 if __name__ == '__main__':
@@ -101,9 +130,10 @@ if __name__ == '__main__':
     # print(table_columns('swap_btc_usdt_candle1m'))
     # print(columns_name('swap_btc_usdt_candle1m'))
 
-    # query('select * from swap_btc_usdt_candle1m')
+    row = query('select * from swap_btc_usdt_candle1m limit 2')
+    print(row)
 
-    values = ('100.001', '300.003', '200.001', '200.002', '18888.898981', '123123100.544001')
-    vals = tuple([values for i in range(50)])
+    # values = ('100.001', '300.003', '200.001', '200.002', '18888.898981', '123123100.544001')
+    # vals = tuple([values for i in range(50)])
     # print(insert('swap_btc_usdt_candle1m', values))
-    print(insert_batch('swap_btc_usdt_candle1m', vals))
+    # print(insert_batch('swap_btc_usdt_candle1m', vals))
