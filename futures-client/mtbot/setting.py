@@ -1,0 +1,2 @@
+
+RUNNING_TICKER = .3

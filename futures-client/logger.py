@@ -2,6 +2,8 @@ import logging
 import os
 import sys
 from logging import FileHandler, Formatter, Filter
+from logging.handlers import QueueHandler, QueueListener
+import queue
 
 
 class CustomHandler(FileHandler):
@@ -27,11 +29,12 @@ class CustomHandler(FileHandler):
 log_dir = os.path.dirname(__file__)
 log_file = os.path.join(log_dir, 'app.log')
 
+queue = queue.Queue()
 log = logging.root
 log.setLevel(logging.DEBUG)
 log.addFilter(Filter('root'))
-log.addHandler(CustomHandler(filename=log_file))
-
+log.addHandler(QueueHandler(queue))
+QueueListener(queue, CustomHandler(filename=log_file), respect_handler_level=True).start()
 
 if __name__ == '__main__':
     log.debug('debug')
