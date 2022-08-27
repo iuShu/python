@@ -5,7 +5,7 @@ from mtbot.mo import ORDER, PENDING
 
 
 async def trace():
-    while not STARTED:
+    while not STARTED.value:
         pass
 
     queues: list = PIPES.get(TICKERS)
@@ -15,6 +15,9 @@ async def trace():
 
     while RUNNING.value:
         tick = await pipe.get()
+        if not ORDER:
+            continue
+
         data = tick[0]
         px = data['last']
         log.info('trace %s', px)

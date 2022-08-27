@@ -2,6 +2,7 @@ import copy
 
 from core.utils import *
 from mtbot.okx.consts import *
+from mtbot.data import ValueHolder
 
 
 class MartinOrder:
@@ -11,6 +12,9 @@ class MartinOrder:
         self.pos = pos
         self.pos_type = pos_type
         self.pos_side = pos_side
+        self.open_type = SIDE_SELL if pos_side is POS_SIDE_SHORT else SIDE_BUY
+        self.close_type = SIDE_BUY if self.open_type is SIDE_SELL else SIDE_SELL
+        self.ord_type = ORDER_TYPE_MARKET
         self._follow_rate = follow_rate
         self._profit_step_rate = profit_step_rate
         self._max_order = max_order
@@ -87,6 +91,7 @@ class MartinOrder:
         nxt._index += 1
         nxt.px = self.follow_price()
         nxt.pos = self.pos * 2
+        nxt.ord_type = ORDER_TYPE_LIMIT
         nxt.state = None
         nxt.ctime = None
         nxt.utime = None
@@ -107,8 +112,8 @@ class MartinOrder:
                f'{self._max_order} {self.px} {self.state} {self.ord_id}'
 
 
-ORDER = None
-PENDING = None
+ORDER = ValueHolder()
+PENDING = ValueHolder()
 
 
 def check_attributes(attr, name: str):

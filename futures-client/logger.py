@@ -33,8 +33,9 @@ queue = queue.Queue()
 log = logging.root
 log.setLevel(logging.DEBUG)
 log.addFilter(Filter('root'))
-log.addHandler(QueueHandler(queue))
-QueueListener(queue, CustomHandler(filename=log_file), respect_handler_level=True).start()
+log.addHandler(CustomHandler(filename=log_file))
+# log.addHandler(QueueHandler(queue))
+# QueueListener(queue, CustomHandler(filename=log_file), respect_handler_level=True).start()
 
 if __name__ == '__main__':
     log.debug('debug')

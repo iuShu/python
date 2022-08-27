@@ -1,8 +1,7 @@
-from asyncio import Queue
 from config.api_config import conf
+from mtbot.okx.aioclient import AioClient
+from mtbot.setting import *
 from mtbot.okx.stream import *
-from mtbot.okx.account import Account
-from mtbot.okx.consts import INST_BTC_USDT_SWAP
 
 
 class ValueHolder:
@@ -20,7 +19,7 @@ class ValueHolder:
 
 
 TICKERS = 'tickers'
-CANDLE = 'candle1m'
+CANDLE = 'candle' + CANDLE_BAR_TYPE
 
 CHANNELS = [
     [TICKERS, INST_BTC_USDT_SWAP],
@@ -34,8 +33,9 @@ PIPES = {
 STARTED = ValueHolder(False)
 RUNNING = ValueHolder(False)
 
-cf = conf('okx')
-CLIENT = Account(api_key=cf['apikey'], api_secret_key=cf['secretkey'], passphrase=cf['passphrase'], test=True)
+cf = conf(EXCHANGE)
+# CLIENT = Account(api_key=cf['apikey'], api_secret_key=cf['secretkey'], passphrase=cf['passphrase'], test=True)
+CLIENT = AioClient(apikey=cf['apikey'], secretkey=cf['secretkey'], passphrase=cf['passphrase'], test=True)
 
 
 class Subscriber:
@@ -52,8 +52,9 @@ class Subscriber:
                 await queue.put(resp['data'])
 
 
-def close():
+async def close():
     RUNNING.value = False
+    await CLIENT.close()
     shutdown()
 
 
