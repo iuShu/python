@@ -1,9 +1,10 @@
 import asyncio
 import random
-
 import aiohttp
+from base import ValueHolder
 
-sample_url = 'https://img-home.csdnimg.cn/images/20201124032511.png'
+# sample_url = 'https://img-home.csdnimg.cn/images/20201124032511.png'
+sample_url = 'https://github.com/iuShu'
 
 
 async def simple():
@@ -31,21 +32,18 @@ class AioClient:
         await asyncio.sleep(.1)     # waiting for the session to close
 
 
-async def instance():
-    inst = AioClient()
-    ret = await inst.request(url=sample_url)
-    print('return', ret)
-    await asyncio.sleep(1)
-    await inst.close()
+# client = AioClient()
+client = ValueHolder()
 
 
-async def daemon(live: int):
-    print('daemon start')
-    while live:
-        print(random.randint(10000, 100000))
-        live -= 1
-        await asyncio.sleep(.5)
-    print('daemon end')
+async def singleton():
+    if not client.value:
+        client.value = await create()
+    return client.value
+
+
+async def create():
+    return AioClient()
 
 
 if __name__ == '__main__':

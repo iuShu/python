@@ -26,8 +26,8 @@ def init_aio_sys_logger() -> Logger:    # to be fixed
     return Logger.with_default_handlers()
 
 
-# log = init_aio_logger()
-log = init_aio_sys_logger()
+log = init_aio_logger()
+# log = init_aio_sys_logger()
 
 
 async def test():
@@ -37,6 +37,20 @@ async def test():
     await log.error('444 error')
     await log.critical('555 critical')
     await log.critical('666 critical 不可以')
+
+
+class ValueHolder:
+
+    def __init__(self, value=None):
+        self._value = value
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
 
 
 if __name__ == '__main__':
