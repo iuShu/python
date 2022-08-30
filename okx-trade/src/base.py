@@ -53,5 +53,12 @@ class ValueHolder:
         self._value = value
 
 
+start = ValueHolder(False)
+running = ValueHolder(False)
+pipes = dict()
+pending = dict()
+subscribe = dict()
+
+
 if __name__ == '__main__':
     asyncio.run(test())

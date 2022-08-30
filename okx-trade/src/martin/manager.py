@@ -1,7 +1,10 @@
 from src.base import ValueHolder
 
-
-RUNNING = ValueHolder(False)
+start = ValueHolder(False)
+running = ValueHolder(False)
+pipes = dict()
+pending = dict()
+subscribe = dict()
 
 
 async def management():

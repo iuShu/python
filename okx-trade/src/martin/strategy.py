@@ -2,10 +2,11 @@ import asyncio
 from statistics import mean
 from asyncio import Queue
 
-from src.base import log
-from src.base import ValueHolder
+from src.base import log, ValueHolder, peak
+from src.config import conf
 from src.okx import stream
-from src.okx.client import client
+from src.okx.streams import pipes
+from src.okx import client
 from src.okx.consts import BAR_15M, BAR_30M
 from .setting import *
 
@@ -24,17 +25,18 @@ BAR_INTERVAL = {
 async def strategy():
     if STRATEGY_MA_DURATION not in AVAILABLE_MA_DURATIONS:
         await log.warning('unavailable MA duration setting')
-        await stream.close()
-        return
+        raise SystemExit(1)
 
     pipe: Queue = await stream.subscribe('candle' + CANDLE_BAR_TYPE, INST_ID)
-    await log.info('strategy start')
+    await log.info('strategy prepare')
     await prepare()
 
     while not stream.started():
         await asyncio.sleep(.5)
 
+    await log.info('strategy start %s' % pipe)
     while stream.running():
+        await log.info('strategy check %s' % pipe)
         candle = await pipe.get()
         try:
             print('strategy tick len', len(candle))
@@ -47,15 +49,23 @@ async def strategy():
 
 
 async def prepare():
-    cli = await client()
-    data = await cli.get_candles(inst_id=INST_ID, bar=CANDLE_BAR_TYPE, limit=str(STRATEGY_MA_DURATION + 5))
-    if not data:
-        return
+    await log.info('prepare start')
+    cli = await client.create(conf(EXCHANGE), test=True)
+    try:
+        await log.info('prepare get candle start')
+        data = await cli.get_candles(inst_id=INST_ID, bar=CANDLE_BAR_TYPE, limit=str(STRATEGY_MA_DURATION + 5))
+        await log.info('prepare get candle end')
+        if not data:
+            return
 
-    for d in data:
-        REPO.insert(0, d)
-    REPO.pop(-1)        # remove incomplete latest data
-    await log.info('prepared %d candle data', len(REPO))
+        for d in data:
+            REPO.insert(0, d)
+        REPO.pop(-1)        # remove incomplete latest data
+        await log.info('prepared %d candle data' % len(REPO))
+    except Exception:
+        await log.error('prepare candle error', exc_info=True)
+    finally:
+        await cli.close()
 
 
 async def feed(data):

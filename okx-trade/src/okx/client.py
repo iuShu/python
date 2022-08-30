@@ -4,13 +4,7 @@ import json
 import aiohttp
 from . import consts
 from . import utils
-from src.base import log, ValueHolder
-
-singleton = ValueHolder()
-APIKEY = ValueHolder()
-SECRETKEY = ValueHolder()
-PASSPHRASE = ValueHolder()
-TEST = ValueHolder(False)
+from src.base import log
 
 
 class AioClient:
@@ -160,13 +154,5 @@ class AioClient:
         return await self.post(consts.MARGIN_BALANCE, params)
 
 
-async def client() -> AioClient:
-    if not singleton.value:
-        if not APIKEY.value or not SECRETKEY.value or not PASSPHRASE.value:
-            raise ValueError('initializing aio client requires config items')
-        singleton.value = await create(APIKEY.value, SECRETKEY.value, PASSPHRASE.value, TEST.value)
-    return singleton.value
-
-
-async def create(apikey: str, secretkey: str, passphrase: str, test=False) -> AioClient:
-    return AioClient(apikey, secretkey, passphrase, test)
+async def create(info: dict, test=False) -> AioClient:
+    return AioClient(info['apikey'], info['secretkey'], info['passphrase'], test)
