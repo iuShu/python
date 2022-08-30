@@ -2,6 +2,7 @@ import hmac
 import base64
 import datetime
 from . import consts as c
+from src.base import log
 
 
 def sign(message, secret_key):
@@ -49,6 +50,14 @@ def signature(timestamp, method, request_path, body, secret_key):
     return base64.b64encode(d)
 
 
+async def valid_resp(raw: dict) -> dict:
+    data = check_resp(raw)
+    if data:
+        return data
+    await log.error('response error %s', raw)
+    return {}
+
+
 def check_resp(raw: dict, multiple=False):
     if not raw:
         return None
@@ -56,7 +65,7 @@ def check_resp(raw: dict, multiple=False):
         return None
     if 'data' not in raw:
         return None
-    data = raw['data']
-    if 'sCode' in data and data['sCode'] != '0':
-        return None
-    return data[0] if not multiple else data
+    return raw['data']
+    # if 'sCode' in data and data['sCode'] != '0':
+    #     return None
+    # return data[0] if not multiple else data

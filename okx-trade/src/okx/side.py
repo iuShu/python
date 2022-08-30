@@ -1,4 +1,4 @@
-from mtbot.okx.consts import POS_SIDE_SHORT, POS_SIDE_LONG
+from .consts import POS_SIDE_SHORT, POS_SIDE_LONG
 
 
 class _Side:

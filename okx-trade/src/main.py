@@ -3,19 +3,23 @@ import asyncio
 import aiodemo
 from config import conf
 
-from okx.client import client, AioClient
+from okx import stream
+from okx.client import client, AioClient, APIKEY, SECRETKEY, PASSPHRASE, TEST
 from okx.consts import INST_BTC_USDT_SWAP
 from okx.utils import check_resp
 from base import log
 
+from martin.strategy import strategy
+
 
 async def daemon(live: int):
-    print('daemon start')
+    await log.info('daemon start')
     while live:
-        print(random.randint(10000, 100000))
+        await log.info(random.randint(10000, 100000))
         live -= 1
         await asyncio.sleep(.5)
-    print('daemon end')
+    # await stream.close()
+    await log.info('daemon end')
 
 
 async def use_case():
@@ -26,8 +30,7 @@ async def use_case():
 
 
 async def candles():    # test
-    c = conf('okx')
-    cli: AioClient = await client(c['apikey'], c['secretkey'], c['passphrase'], test=True)
+    cli: AioClient = await client()
     resp = await cli.get_candles(inst_id=INST_BTC_USDT_SWAP, limit=4)
     data = check_resp(resp, True)
     if not data:
@@ -38,11 +41,26 @@ async def candles():    # test
     await cli.close()
 
 
+def init_client():
+    c = conf('okx')
+    APIKEY.value = c['apikey']
+    SECRETKEY.value = c['secretkey']
+    PASSPHRASE.value = c['passphrase']
+    TEST.value = True
+
+
+async def wss():
+    await stream.connect()
+
+
 async def main():
+    init_client()
     async_tasks = [
-        asyncio.create_task(daemon(10)),
+        asyncio.create_task(daemon(30)),
         # asyncio.create_task(use_case()),
-        asyncio.create_task(candles()),
+        # asyncio.create_task(candles()),
+        asyncio.create_task(wss()),
+        asyncio.create_task(strategy()),
     ]
     await asyncio.wait(async_tasks)
 

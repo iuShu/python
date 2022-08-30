@@ -1,12 +1,15 @@
+import asyncio
 from statistics import mean
 from asyncio import Queue
-from src.base import log
-from mtbot.data import PIPES, STARTED, RUNNING, CANDLE, CLIENT, ValueHolder, close
-from .setting import *
-from src.okx.utils import check_resp
-from src.okx.consts import *
 
-AVAILABLE_MA_DURATIONS = [5, 10, 15, 20, 30]
+from src.base import log
+from src.base import ValueHolder
+from src.okx import stream
+from src.okx.client import client
+from src.okx.consts import BAR_15M, BAR_30M
+from .setting import *
+
+AVAILABLE_MA_DURATIONS = [5, 10, 15, 20, 30, 60, 100, 150, 200, 365]
 REPO = []
 TS = ValueHolder()
 TICK = ValueHolder()
@@ -19,20 +22,19 @@ BAR_INTERVAL = {
 
 
 async def strategy():
-    while not STARTED.value:
-        pass
-
     if STRATEGY_MA_DURATION not in AVAILABLE_MA_DURATIONS:
         await log.warning('unavailable MA duration setting')
-        await close()
+        await stream.close()
         return
 
-    queues: list = PIPES.get(CANDLE)
-    pipe = Queue()
-    queues.append(pipe)
+    pipe: Queue = await stream.subscribe('candle' + CANDLE_BAR_TYPE, INST_ID)
     await log.info('strategy start')
     await prepare()
-    while RUNNING.value:
+
+    while not stream.started():
+        await asyncio.sleep(.5)
+
+    while stream.running():
         candle = await pipe.get()
         try:
             print('strategy tick len', len(candle))
@@ -45,13 +47,9 @@ async def strategy():
 
 
 async def prepare():
-    await log.info('begin candle')
-    async with CLIENT as client:
-        resp = await client.get_candles(inst_id=INST_ID, bar=CANDLE_BAR_TYPE, limit=str(STRATEGY_MA_DURATION + 5))
-    await log.info('end candle')
-    data = check_resp(resp, True)
+    cli = await client()
+    data = await cli.get_candles(inst_id=INST_ID, bar=CANDLE_BAR_TYPE, limit=str(STRATEGY_MA_DURATION + 5))
     if not data:
-        await log.warning('request candle error %s', resp)
         return
 
     for d in data:

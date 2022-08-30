@@ -1,8 +1,9 @@
-from ..okx.consts import *
+from ..okx.consts import INST_TYPE_SWAP, INST_BTC_USDT_SWAP, BAR_1M, TD_MODE_ISOLATE
 from ..okx.side import LongSide, ShortSide
 
 EXCHANGE = 'okx'
 INST_ID = INST_BTC_USDT_SWAP
+INST_TYPE = INST_TYPE_SWAP
 CANDLE_BAR_TYPE = BAR_1M
 
 STRATEGY_MA_DURATION = 10
