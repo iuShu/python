@@ -2,17 +2,16 @@ import asyncio
 from statistics import mean
 from asyncio import Queue
 
-from src.base import log, ValueHolder, peak
+from src.base import log, ValueHolder
 from src.config import conf
 from src.okx import stream
-from src.okx.streams import pipes
 from src.okx import client
 from src.okx.consts import BAR_15M, BAR_30M
 from .setting import *
 
 AVAILABLE_MA_DURATIONS = [5, 10, 15, 20, 30, 60, 100, 150, 200, 365]
 REPO = []
-TS = ValueHolder()
+TS = ValueHolder(0)
 TICK = ValueHolder()
 
 BAR_INTERVAL = {
@@ -28,29 +27,30 @@ async def strategy():
         raise SystemExit(1)
 
     pipe: Queue = await stream.subscribe('candle' + CANDLE_BAR_TYPE, INST_ID)
+    cli = await client.create(conf(EXCHANGE), test=True)
     await log.info('strategy prepare')
-    await prepare()
+    # await prepare()
 
     while not stream.started():
         await asyncio.sleep(.5)
 
-    await log.info('strategy start %s' % pipe)
+    await log.info('strategy start')
     while stream.running():
-        await log.info('strategy check %s' % pipe)
         candle = await pipe.get()
         try:
-            print('strategy tick len', len(candle))
+            if stream.close_signal(candle):
+                break
             await feed(candle[0])
         except Exception:
             await log.error('strategy error', exc_info=True)
         finally:
             pipe.task_done()
-    await log.info('strategy end')
+    await cli.close()
+    await log.info('strategy stop')
 
 
-async def prepare():
+async def prepare(cli: client.AioClient):
     await log.info('prepare start')
-    cli = await client.create(conf(EXCHANGE), test=True)
     try:
         await log.info('prepare get candle start')
         data = await cli.get_candles(inst_id=INST_ID, bar=CANDLE_BAR_TYPE, limit=str(STRATEGY_MA_DURATION + 5))
@@ -71,15 +71,16 @@ async def prepare():
 async def feed(data):
     ts = int(data[0])
 
-    if not TS.value:
+    if not TS.value and REPO:
         last_ts = int(REPO[-1][0])
         interval = BAR_INTERVAL[CANDLE_BAR_TYPE]
         if ((ts - last_ts) / 1000) != interval:
             REPO.clear()    # discard old data
-    elif ts > TS.value:
+    elif TS.value != 0 and ts > TS.value:
         REPO.append(TICK.value)
         if len(REPO) > STRATEGY_MAX_REPO_SIZE:
             REPO.pop(0)
+        await log.info('strategy collect %d' % len(REPO))
 
     TS.value = ts
     TICK.value = data
@@ -91,8 +92,8 @@ async def satisfy(px: float) -> bool:
 
     pxs = [float(r[4]) for r in REPO[-STRATEGY_MA_DURATION:]]
     avg = mean(pxs)
-    await log.debug('%f %f %s', px, avg, pxs)
+    await log.debug('%f %f %s' % (px, avg, pxs))
     if ORDER_POS_SIDE.is_profit(avg, px):
-        await log.info('%f %f', px, avg)
+        await log.info('%f %f' % (px, avg))
         return True
     return False

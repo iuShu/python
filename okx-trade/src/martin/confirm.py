@@ -1,34 +1,38 @@
 import asyncio
 from asyncio import Queue
 from src.base import log
-from src.okx import stream
-from src.okx.client import client
+from src.config import conf
+from src.okx import stream, client
 from src.okx.consts import STATE_FILLED
 from .morder import MartinOrder, ORDER, PENDING
-from .setting import INST_ID, INST_TYPE
+from .setting import EXCHANGE, INST_ID, INST_TYPE
 
 
 async def confirm():
     pipe: Queue = await stream.subscribe('orders', INST_ID, INST_TYPE)
+    cli = await client.create(conf(EXCHANGE), test=True)
     await log.info('confirm start')
 
-    while not stream.started():
+    while not stream.key_started():
         await asyncio.sleep(.5)
 
     while stream.running():
         msg = await pipe.get()
         try:
+            if stream.close_signal(msg):
+                break
             data = msg[0]
-            await confirm_deal(data)
+            await confirm_deal(data, cli)
             await confirm_filled(data)
         except Exception:
             await log.error('confirm error', exc_info=True)
         finally:
             pipe.task_done()
-    await log.info('confirm end')
+    await cli.close()
+    await log.info('confirm stop')
 
 
-async def confirm_deal(data: dict):
+async def confirm_deal(data: dict, cli: client.AioClient):
     ord_id, state, pnl = data['ordId'], data['state'], float(data['pnl'])
     if state != STATE_FILLED or not ORDER.value:
         return
@@ -37,9 +41,9 @@ async def confirm_deal(data: dict):
         return
 
     if pnl > 0:
-        await log.info('confirm order-%d WON %f !!!', order.index(), pnl)
+        await log.info('confirm order-%d WON %f !!!' % (order.index(), pnl))
     elif pnl < 0:
-        await log.warning('confirm loss %f at order-%d', pnl, order.index())
+        await log.warning('confirm loss %f at order-%d' % (pnl, order.index()))
     else:
         return
     ORDER.value = None
@@ -48,13 +52,12 @@ async def confirm_deal(data: dict):
         return
 
     pending: MartinOrder = PENDING.value
-    cli = await client()
     datas = await cli.cancel_order(INST_ID, ord_id=pending.ord_id)
     if not datas:
-        await log.warning('pending order-%d at px-%f suddenly filled', pending.index(), pending.px)
+        await log.warning('pending order-%d at px-%f suddenly filled' % (pending.index(), pending.px))
         pending.as_first_order()
         return
-    await log.info('cancel pending order-%d at px-%f', pending.index(), pending.px)
+    await log.info('cancel pending order-%d at px-%f' % (pending.index(), pending.px))
 
 
 async def confirm_filled(data: dict):
@@ -71,4 +74,4 @@ async def confirm_filled(data: dict):
     order.utime = data['uTime']
     ORDER.value = order
     PENDING.value = None
-    await log.info('confirm order-%d at px-%f', order.index(), order.px)
+    await log.info('confirm order-%d at px-%f' % (order.index(), order.px))

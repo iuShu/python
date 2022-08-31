@@ -1,32 +1,36 @@
 import asyncio
-from asyncio import Queue
+
 from src.base import log
-from src.okx import stream
+from src.config import conf
+from src.okx import stream, client
 from src.okx.consts import STATE_FILLED
+from .morder import MartinOrder, ORDER
 from .opertaions import place_order, place_algo, add_margin_balance
-from .morder import MartinOrder, ORDER, PENDING
-from .setting import INST_ID
+from .setting import EXCHANGE
 
 
 async def stalk():
-    await log.info('stalk start')
+    cli = await client.create(conf(EXCHANGE), test=True)
+    await log.info('stalker start')
 
     while not stream.started():
         await asyncio.sleep(.5)
 
     while stream.running():
         try:
-            await place_algo()
-            await add_margin_balance()
-            await place_next()
+            await place_algo(cli)
+            await add_margin_balance(cli)
+            await place_next(cli)
             await asyncio.sleep(.3)
         except Exception:
             await log.error('stalk error', exc_info=True)
         finally:
             pass
+    await cli.close()
+    await log.info('stalker stop')
 
 
-async def place_next():
+async def place_next(cli: client.AioClient):
     if not ORDER.value:
         return
 
@@ -35,4 +39,5 @@ async def place_next():
         return
 
     nxt = order.create_next()
-    await place_order(nxt)
+    await log.info('place next at px-%f pos-%d for order-%d' % (order.index(), nxt.pos, nxt.px))
+    await place_order(nxt, cli)

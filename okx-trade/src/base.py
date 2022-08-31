@@ -58,6 +58,7 @@ running = ValueHolder(False)
 pipes = dict()
 pending = dict()
 subscribe = dict()
+repo = dict()
 
 
 if __name__ == '__main__':

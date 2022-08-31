@@ -1,15 +1,14 @@
 from src.base import log
-from src.okx.client import client
+from src.okx.client import AioClient
 from src.okx.consts import STATE_LIVE, STATE_FILLED, ALGO_TYPE_OCO, MARGIN_BALANCE_ADD
 from .morder import MartinOrder, PENDING, ORDER
 from .setting import INST_ID
 
 
-async def place_order(order: MartinOrder) -> bool:
-    cli = await client()
-    created = cli.create_order(inst_id=INST_ID, td_mode=order.pos_type, side=order.open_type,
-                               pos_side=order.pos_side, ord_type=order.ord_type, sz=str(order.pos), px=order.px)
-    datas = await cli.place_order(created)
+async def place_order(order: MartinOrder, client: AioClient) -> bool:
+    created = client.create_order(inst_id=INST_ID, td_mode=order.pos_type, side=order.open_type,
+                                  pos_side=order.pos_side, ord_type=order.ord_type, sz=str(order.pos), px=order.px)
+    datas = await client.place_order(created)
     if not datas:
         return False
 
@@ -20,7 +19,7 @@ async def place_order(order: MartinOrder) -> bool:
     return True
 
 
-async def confirm_order() -> bool:
+async def confirm_order(client: AioClient) -> bool:
     """
     Deprecated
     """
@@ -28,8 +27,7 @@ async def confirm_order() -> bool:
     if not order or order.state == STATE_FILLED:
         return False
 
-    cli = await client()
-    datas = await cli.get_order_info(inst_id=INST_ID, ord_id=order.ord_id)
+    datas = await client.get_order_info(inst_id=INST_ID, ord_id=order.ord_id)
     if not datas:
         return False
 
@@ -49,14 +47,13 @@ async def confirm_order() -> bool:
     return True
 
 
-async def place_algo() -> bool:
+async def place_algo(client: AioClient) -> bool:
     order: MartinOrder = ORDER.value
     if not order or order.state != STATE_FILLED or order.algo_id:
         return False
 
-    cli = await client()
     if order.prev and order.prev.algo_id:
-        datas = await cli.cancel_algo_oco(inst_id=INST_ID, algo_ids=[order.prev.algo_id])
+        datas = await client.cancel_algo_oco(inst_id=INST_ID, algo_ids=[order.prev.algo_id])
         if not datas:
             await log.error('cancel prev algo-%d failed', order.prev.index())
         else:
@@ -66,10 +63,10 @@ async def place_algo() -> bool:
     tpx = str(order.profit_price())
     spx = str(order.stop_loss_price())
     full_pos = str(order.full_pos())
-    algo = cli.create_algo_oco(inst_id=INST_ID, td_mode=order.pos_type, algo_type=ALGO_TYPE_OCO, sz=full_pos,
-                               side=order.close_type, tp_tri_px=tpx, sl_tri_px=spx, pos_side=order.pos_side)
+    algo = client.create_algo_oco(inst_id=INST_ID, td_mode=order.pos_type, algo_type=ALGO_TYPE_OCO, sz=full_pos,
+                                  side=order.close_type, tp_tri_px=tpx, sl_tri_px=spx, pos_side=order.pos_side)
     await log.info('place algo-%d at tp-%s sl-%s fp-%s', order.index(), tpx, spx, full_pos)
-    datas = await cli.place_algo_oco(algo)
+    datas = await client.place_algo_oco(algo)
     if not datas:
         return False
 
@@ -78,7 +75,7 @@ async def place_algo() -> bool:
     return True
 
 
-async def add_margin_balance() -> bool:
+async def add_margin_balance(client: AioClient) -> bool:
     order: MartinOrder = ORDER.value
     if not order or order.state != STATE_FILLED or order.extra_margin != 0:
         return False
@@ -89,8 +86,7 @@ async def add_margin_balance() -> bool:
         await log.info('order-%d has enough margin balance', order.index())
         return True
 
-    cli = await client()
-    datas = await cli.margin_balance(inst_id=INST_ID, pos_side=order.pos_side, _type=MARGIN_BALANCE_ADD, amt=str(extra))
+    datas = await client.margin_balance(inst_id=INST_ID, pos_side=order.pos_side, _type=MARGIN_BALANCE_ADD, amt=str(extra))
     if not datas:
         return False
 

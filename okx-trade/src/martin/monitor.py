@@ -11,7 +11,7 @@ _REPO = []
 
 async def monitoring():
     pipe: Queue = await stream.subscribe('tickers', INST_ID)
-    await log.info('trace start')
+    await log.info('monitor start')
 
     while not stream.started():
         await asyncio.sleep(.5)
@@ -19,16 +19,19 @@ async def monitoring():
     while stream.running():
         tick = await pipe.get()
         try:
+            if stream.close_signal(tick):
+                break
             if not ORDER.value:
                 continue
 
             data = tick[0]
             px = data['last']
-            await log.debug('trace %s', px)
+            await log.debug('monitor %s' % px)
         except Exception:
-            await log.error('trace error', exc_info=True)
+            await log.error('monitor error', exc_info=True)
         finally:
             pipe.task_done()
+    await log.info('monitor stop')
 
 
 async def ensure_close(px):
