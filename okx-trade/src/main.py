@@ -21,11 +21,11 @@ async def daemon(live: int):
     await log.info('daemon end')
 
 
-async def use_case():
-    client: aiodemo.AioClient = await aiodemo.singleton()
-    resp = await client.request(url=aiodemo.sample_url)
-    print('>', resp)
-    await client.close()
+# async def use_case():
+#     client: aiodemo.AioClient = await aiodemo.singleton()
+#     resp = await client.request(url=aiodemo.sample_url)
+#     print('>', resp)
+#     await client.close()
 
 
 async def candles():    # test
@@ -43,7 +43,7 @@ async def wss():
 
 async def main():
     async_tasks = [
-        asyncio.create_task(daemon(20)),
+        asyncio.create_task(daemon(100)),
         # asyncio.create_task(use_case()),
         # asyncio.create_task(candles()),
         asyncio.create_task(wss()),

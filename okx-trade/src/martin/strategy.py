@@ -29,7 +29,7 @@ async def strategy():
     pipe: Queue = await stream.subscribe('candle' + CANDLE_BAR_TYPE, INST_ID)
     cli = await client.create(conf(EXCHANGE), test=True)
     await log.info('strategy prepare')
-    # await prepare()
+    await prepare(cli)
 
     while not stream.started():
         await asyncio.sleep(.5)
@@ -50,11 +50,8 @@ async def strategy():
 
 
 async def prepare(cli: client.AioClient):
-    await log.info('prepare start')
     try:
-        await log.info('prepare get candle start')
         data = await cli.get_candles(inst_id=INST_ID, bar=CANDLE_BAR_TYPE, limit=str(STRATEGY_MA_DURATION + 5))
-        await log.info('prepare get candle end')
         if not data:
             return
 
@@ -71,12 +68,13 @@ async def prepare(cli: client.AioClient):
 async def feed(data):
     ts = int(data[0])
 
-    if not TS.value and REPO:
+    if TS.value == 0 and REPO:
         last_ts = int(REPO[-1][0])
         interval = BAR_INTERVAL[CANDLE_BAR_TYPE]
         if ((ts - last_ts) / 1000) != interval:
             REPO.clear()    # discard old data
-    elif TS.value != 0 and ts > TS.value:
+
+    if TS.value != 0 and ts > TS.value:
         REPO.append(TICK.value)
         if len(REPO) > STRATEGY_MAX_REPO_SIZE:
             REPO.pop(0)

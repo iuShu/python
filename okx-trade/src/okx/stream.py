@@ -10,22 +10,37 @@ key_running = 'running'
 key_pipes = 'pipes'
 key_pending = 'pending'
 key_subscribe = 'subscribe'
+key_subscribed = 'subscribed'
 
+MAX_WAITING_MSG = 100
 CLOSE_SIGNAL = 'stream-close'
 
 
 async def connect():
     session = aiohttp.ClientSession()
     await log.info('websocket start')
-    async with session.ws_connect(url=WSS_PUBLIC_URL, autoclose=False, autoping=False) as ws:
-        await log.info('websocket connected')
-        repo[key_started] = True
-        repo[key_running] = True
-        while running():
-            await send(ws)
-            if not await dispatch(ws):
-                break
-        await ws.close()
+    interrupted, times = False, 0
+    while True:
+        async with session.ws_connect(url=WSS_PUBLIC_URL, autoclose=False, autoping=False) as ws:
+            await log.info('websocket connected')
+            repo[key_started] = True
+            repo[key_running] = True
+            while running():
+                await send(ws)
+                if not await dispatch(ws):
+                    interrupted = True
+                    times += 1
+                    break
+            await ws.close()
+        if interrupted:
+            await log.warning('websocket interrupted %d, reconnecting...' % times)
+            subscribes, subscribed = var(key_subscribe, dict()), var(key_subscribed, dict())
+            item = subscribed.popitem()
+            while item:
+                subscribes[item[0]] = item[1]
+                item = subscribed.popitem() if subscribed else None
+        else:
+            break
     await close()
     await session.close()
     await log.info('websocket has been closed')
@@ -61,15 +76,18 @@ async def dispatch(ws) -> bool:
             await log.warning('no subscriber at %s %s' % (arg['channel'], arg['instId']))
         else:
             for queue in queues:
+                if queue.qsize() > MAX_WAITING_MSG:
+                    queue.get_nowait()      # discard old msg
                 queue.put_nowait(json['data'])
     elif 'event' in json:
         event = json['event']
         if event == 'error':
             await log.error('event error by %s' % json)
         else:
-            arg, pending = json['arg'], var(key_pending, dict())
+            arg, pending, subscribed = json['arg'], var(key_pending, dict()), var(key_subscribed, dict())
             if event == 'subscribe':
-                pending.pop(_key(arg['channel'], arg['instId']))
+                key = _key(arg['channel'], arg['instId'])
+                subscribed[key] = pending.pop(key)
                 await log.info('subscribed %s %s' % (arg['channel'], arg['instId']))
     else:
         await log.warning('received unknown data %s' % json)

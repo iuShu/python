@@ -12,11 +12,11 @@ from .setting import *
 async def initiate():
     pipe = await stream.subscribe('tickers', INST_ID)
     cli = await client.create(conf(EXCHANGE), test=True)
-    await log.info('initiator start')
 
-    while not stream.key_started():
+    while not stream.started():
         await asyncio.sleep(.5)
 
+    await log.info('initiator start')
     while stream.running():
         tick = await pipe.get()
         try:
