@@ -3,12 +3,14 @@ import asyncio
 import aiodemo
 from config import conf
 
-from okx import stream
-from okx import client
+from okx import stream, client, private
 from okx.consts import INST_BTC_USDT_SWAP
 from base import log
 
 from martin.strategy import strategy
+from martin.initiator import initiate
+from martin.stalker import stalk
+from martin.confirm import confirm
 
 
 async def daemon(live: int):
@@ -37,17 +39,25 @@ async def candles():    # test
     await cli.close()
 
 
-async def wss():
+async def wss_public():
     await stream.connect()
+
+
+async def wss_private():
+    await private.connect()
 
 
 async def main():
     async_tasks = [
-        asyncio.create_task(daemon(100)),
+        # asyncio.create_task(daemon(100)),
         # asyncio.create_task(use_case()),
         # asyncio.create_task(candles()),
-        asyncio.create_task(wss()),
+        asyncio.create_task(wss_public()),
+        asyncio.create_task(wss_private()),
         asyncio.create_task(strategy()),
+        asyncio.create_task(initiate()),
+        asyncio.create_task(stalk()),
+        asyncio.create_task(confirm()),
     ]
     await asyncio.wait(async_tasks)
 

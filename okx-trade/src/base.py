@@ -53,11 +53,6 @@ class ValueHolder:
         self._value = value
 
 
-start = ValueHolder(False)
-running = ValueHolder(False)
-pipes = dict()
-pending = dict()
-subscribe = dict()
 repo = dict()
 
 

@@ -6,27 +6,29 @@ from json import loads
 from asyncio.queues import Queue
 from aiohttp.http_websocket import WSMsgType
 from src.base import log, repo
-from .consts import WSS_PUBLIC_URL
+from .consts import WSS_PRIVATE_URL, GET, WSS_REQUEST_PATH
+from .utils import pre_hash, sign
 
-key_started = 'started'
-key_running = 'running'
-key_pipes = 'pipes'
-key_pending = 'pending'
-key_subscribe = 'subscribe'
-key_subscribed = 'subscribed'
-key_account = 'ws-account'
+key_started = 'private-started'
+key_running = 'private-running'
+key_pipes = 'private-pipes'
+key_pending = 'private-pending'
+key_subscribe = 'private-subscribe'
+key_subscribed = 'private-subscribed'
+key_account = 'private-ws-account'
 
 MAX_WAITING_MSG = 100
-CLOSE_SIGNAL = 'stream-close'
+CLOSE_SIGNAL = 'private-stream-close'
 
 
 async def connect():
     session = aiohttp.ClientSession()
-    await log.info('websocket start')
+    await log.info('websocket private start')
     interrupted, times = False, 0
     while True:
-        async with session.ws_connect(url=WSS_PUBLIC_URL, autoclose=False, autoping=False) as ws:
-            await log.info('websocket connected')
+        async with session.ws_connect(url=WSS_PRIVATE_URL, autoclose=False, autoping=False) as ws:
+            await log.info('websocket private connected')
+            await login(ws)
             repo[key_started] = True
             repo[key_running] = True
             while running():
@@ -39,7 +41,7 @@ async def connect():
 
         if not interrupted:
             break
-        await log.warning('websocket interrupted %d, reconnecting...' % times)
+        await log.warning('websocket private interrupted %d, reconnecting...' % times)
         subscribes, subscribed = var(key_subscribe, dict()), var(key_subscribed, dict())
         item = subscribed.popitem()
         while item:
@@ -49,7 +51,35 @@ async def connect():
 
     await close()
     await session.close()
-    await log.info('websocket has been closed')
+    await log.info('websocket private has been closed')
+
+
+async def login(ws):
+    acc = var(key_account, dict())
+    for i in range(10):
+        if acc:
+            break
+        await asyncio.sleep(.5)
+    if not acc:
+        await log.fatal('account not found, exit')
+        raise SystemExit(1)
+
+    packet = _login_json(acc)
+    await ws.send_json(packet)
+    # await log.info('send login params %s' % packet)
+    msg = await ws.receive()
+    if msg.type != WSMsgType.TEXT:
+        await log.error('unknown msg type %s %s' % (msg.type, msg.data))
+        raise SystemExit(1)
+
+    json = loads(msg.data)
+    event = json.get('event')
+    if event == 'login':
+        await log.info('login ok')
+        return
+
+    await log.error('login failed by %s' % json)
+    raise SystemExit(1)
 
 
 async def send(ws):
@@ -95,9 +125,15 @@ async def dispatch(ws) -> bool:
                 key = _key(arg['channel'], arg['instId'])
                 subscribed[key] = pending.pop(key)
                 await log.info('subscribed %s %s' % (arg['channel'], arg['instId']))
+            elif event == 'login':
+                await log.info('login ok')
     else:
         await log.warning('received unknown data %s' % json)
     return True
+
+
+async def account(acc: dict):
+    var(key_account, dict()).update(acc)
 
 
 async def subscribe(channel: str, inst_id: str, inst_type='') -> Queue:
@@ -146,6 +182,18 @@ def started() -> bool:
 
 def _key(channel: str, inst_id: str):
     return hash(channel + inst_id)
+
+
+def _login_json(acc: dict):
+    ts = str(int(time.time()))
+    signature = sign(pre_hash(ts, GET, WSS_REQUEST_PATH, ''), acc['secretkey'])
+    arg = {
+        'apiKey': acc['apikey'],
+        'passphrase': acc['passphrase'],
+        'timestamp': ts,
+        'sign': signature.decode('utf-8')
+    }
+    return {'op': 'login', 'args': [arg]}
 
 
 def _subscribe_json(channel: str, inst_id: str, inst_type: str):

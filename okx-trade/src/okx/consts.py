@@ -13,6 +13,7 @@ OK_ACCESS_PASSPHRASE = 'OK-ACCESS-PASSPHRASE'
 API_URL = 'https://www.okx.com'
 WSS_PUBLIC_URL = 'wss://wspap.okx.com:8443/ws/v5/public?brokerId=9999'
 WSS_PRIVATE_URL = 'wss://wspap.okx.com:8443/ws/v5/private?brokerId=9999'
+WSS_REQUEST_PATH = '/users/self/verify'
 
 # instrument
 INST_BTC_USDT_SWAP = 'BTC-USDT-SWAP'

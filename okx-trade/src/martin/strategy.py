@@ -90,8 +90,8 @@ async def satisfy(px: float) -> bool:
 
     pxs = [float(r[4]) for r in REPO[-STRATEGY_MA_DURATION:]]
     avg = mean(pxs)
-    await log.debug('%f %f %s' % (px, avg, pxs))
+    await log.info('px-%f ma-%f' % (px, avg))
     if ORDER_POS_SIDE.is_profit(avg, px):
-        await log.info('%f %f' % (px, avg))
+        await log.info('satisfied px-%f ma-%f' % (px, avg))
         return True
     return False

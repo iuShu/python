@@ -2,26 +2,29 @@ import asyncio
 from asyncio import Queue
 from src.base import log
 from src.config import conf
-from src.okx import stream, client
+from src.okx import client, private as pstream
 from src.okx.consts import STATE_FILLED
 from .morder import MartinOrder, ORDER, PENDING
 from .setting import EXCHANGE, INST_ID, INST_TYPE
 
 
 async def confirm():
-    pipe: Queue = await stream.subscribe('orders', INST_ID, INST_TYPE)
-    cli = await client.create(conf(EXCHANGE), test=True)
-    await log.info('confirm start')
+    config = conf(EXCHANGE)
+    await pstream.account(config)
+    pipe: Queue = await pstream.subscribe('orders', INST_ID, INST_TYPE)
+    cli = await client.create(config, test=True)
 
-    while not stream.key_started():
+    while not pstream.started():
         await asyncio.sleep(.5)
 
-    while stream.running():
+    await log.info('confirm start')
+    while pstream.running():
         msg = await pipe.get()
         try:
-            if stream.close_signal(msg):
+            if pstream.close_signal(msg):
                 break
             data = msg[0]
+            await log.info('confirm recv %s' % data)
             await confirm_deal(data, cli)
             await confirm_filled(data)
         except Exception:
@@ -54,7 +57,8 @@ async def confirm_deal(data: dict, cli: client.AioClient):
     pending: MartinOrder = PENDING.value
     datas = await cli.cancel_order(INST_ID, ord_id=pending.ord_id)
     if not datas:
-        await log.warning('pending order-%d at px-%f suddenly filled' % (pending.index(), pending.px))
+        await log.warning('pending order-%d at px-%f fp-%d suddenly filled'
+                          % (pending.index(), pending.px, pending.full_pos()))
         pending.as_first_order()
         return
     await log.info('cancel pending order-%d at px-%f' % (pending.index(), pending.px))

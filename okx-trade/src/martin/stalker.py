@@ -11,11 +11,10 @@ from .setting import EXCHANGE
 
 async def stalk():
     cli = await client.create(conf(EXCHANGE), test=True)
-    await log.info('stalker start')
-
     while not stream.started():
         await asyncio.sleep(.5)
 
+    await log.info('stalker start')
     while stream.running():
         try:
             await place_algo(cli)
@@ -31,11 +30,8 @@ async def stalk():
 
 
 async def place_next(cli: client.AioClient):
-    if not ORDER.value:
-        return
-
     order: MartinOrder = ORDER.value
-    if order.state != STATE_FILLED or order.next.ord_id:
+    if not order or order.state != STATE_FILLED or order.next.ord_id:
         return
 
     nxt = order.create_next()

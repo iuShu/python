@@ -54,7 +54,7 @@ async def valid_resp(raw: dict) -> dict:
     data = check_resp(raw)
     if data:
         return data
-    await log.error('response error %s', raw)
+    await log.error('response error %s' % raw)
     return {}
 
 

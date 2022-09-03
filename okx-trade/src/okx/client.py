@@ -17,7 +17,7 @@ class AioClient:
         self.test = test
 
     async def get(self, path: str, params=None):
-        url = consts.API_URL + path + utils.parse_params_to_str(params)
+        url = consts.API_URL + path + (utils.parse_params_to_str(params) if params else '')
         timestamp = utils.get_timestamp()
         signature = utils.sign(utils.pre_hash(timestamp, consts.GET, path, ''), self.secretkey)
         headers = utils.get_header(self.apikey, signature.decode('utf-8'), timestamp, self.passphrase)
@@ -25,7 +25,7 @@ class AioClient:
             headers['x-simulated-trading'] = '1'
         async with self.session.get(url=url, headers=headers) as resp:
             if not str(resp.status).startswith('2'):
-                await log.error('Get status %d', resp.status)
+                await log.error('Get status %d' % resp.status)
             else:
                 try:
                     resp = await resp.json()
@@ -41,9 +41,9 @@ class AioClient:
         headers = utils.get_header(self.apikey, signature.decode('utf-8'), timestamp, self.passphrase)
         if self.test:
             headers['x-simulated-trading'] = '1'
-        async with self.session.post(url=url, headers=headers, data=params) as resp:
+        async with self.session.post(url=url, headers=headers, json=params) as resp:
             if not str(resp.status).startswith('2'):
-                await log.error('Post status %d', resp.status)
+                await log.error('Post status %d' % resp.status)
             else:
                 try:
                     resp = await resp.json()
@@ -55,6 +55,10 @@ class AioClient:
     async def close(self):
         await self.session.close()
         await asyncio.sleep(.1)     # waiting for the session to close
+
+    async def server_timestamp(self):
+        datas = await self.get(consts.SERVER_TIMESTAMP_URL)
+        return datas[0]['ts']
 
     async def get_candles(self, inst_id: str, bar='', before='', after='', limit='', history=False):
         params = {'instId': inst_id}
