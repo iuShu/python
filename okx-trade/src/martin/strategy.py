@@ -78,7 +78,7 @@ async def feed(data):
         REPO.append(TICK.value)
         if len(REPO) > STRATEGY_MAX_REPO_SIZE:
             REPO.pop(0)
-        await log.info('strategy collect %d' % len(REPO))
+        # await log.info('strategy collect %d' % len(REPO))
 
     TS.value = ts
     TICK.value = data
@@ -90,8 +90,8 @@ async def satisfy(px: float) -> bool:
 
     pxs = [float(r[4]) for r in REPO[-STRATEGY_MA_DURATION:]]
     avg = mean(pxs)
-    await log.info('px-%f ma-%f' % (px, avg))
+    # await log.info('px=%f ma=%f' % (px, avg))
     if ORDER_POS_SIDE.is_profit(avg, px):
-        await log.info('satisfied px-%f ma-%f' % (px, avg))
+        await log.info('satisfied px=%f ma=%f' % (px, avg))
         return True
     return False

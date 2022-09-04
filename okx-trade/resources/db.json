@@ -1,9 +1,9 @@
 {
   "mysql": {
-    "host": "",
-    "port": 0,
-    "user": "",
-    "password": "",
-    "database": ""
+    "host": "120.25.3.81",
+    "port": 3306,
+    "user": "trader",
+    "password": "trader@123",
+    "database": "trader"
   }
 }

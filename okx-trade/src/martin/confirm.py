@@ -4,7 +4,7 @@ from src.base import log
 from src.config import conf
 from src.okx import client, private as pstream
 from src.okx.consts import STATE_FILLED
-from .morder import MartinOrder, ORDER, PENDING
+from . import morder
 from .setting import EXCHANGE, INST_ID, INST_TYPE
 
 
@@ -24,7 +24,7 @@ async def confirm():
             if pstream.close_signal(msg):
                 break
             data = msg[0]
-            await log.info('confirm recv %s' % data)
+            # await log.info('confirm recv %s' % data)
             await confirm_deal(data, cli)
             await confirm_filled(data)
         except Exception:
@@ -37,45 +37,45 @@ async def confirm():
 
 async def confirm_deal(data: dict, cli: client.AioClient):
     ord_id, state, pnl = data['ordId'], data['state'], float(data['pnl'])
-    if state != STATE_FILLED or not ORDER.value:
+    order = morder.order()
+    if state != STATE_FILLED or not order:
         return
-    order: MartinOrder = ORDER.value
     if order.ord_id != ord_id:
         return
 
     if pnl > 0:
-        await log.info('confirm order-%d WON %f !!!' % (order.index(), pnl))
+        await log.info('confirm order=%d WON %f !!!' % (order.index(), pnl))
     elif pnl < 0:
-        await log.warning('confirm loss %f at order-%d' % (pnl, order.index()))
+        await log.warning('confirm loss %f at order=%d' % (pnl, order.index()))
     else:
         return
-    ORDER.value = None
+    morder.set_order(None)
 
-    if not PENDING.value:
+    pending = morder.pending()
+    if not pending:
         return
 
-    pending: MartinOrder = PENDING.value
     datas = await cli.cancel_order(INST_ID, ord_id=pending.ord_id)
     if not datas:
-        await log.warning('pending order-%d at px-%f fp-%d suddenly filled'
+        await log.warning('pending order=%d at px=%f fp=%d suddenly filled'
                           % (pending.index(), pending.px, pending.full_pos()))
         pending.as_first_order()
         return
-    await log.info('cancel pending order-%d at px-%f' % (pending.index(), pending.px))
+    await log.info('cancel pending order=%d at px=%f' % (pending.index(), pending.px))
 
 
 async def confirm_filled(data: dict):
     ord_id, state = data['ordId'], data['state']
-    if state != STATE_FILLED or not PENDING.value:
+    pending = morder.pending()
+    if state != STATE_FILLED or not pending:
         return
-    order: MartinOrder = PENDING.value
-    if order.ord_id != ord_id:
+    if pending.ord_id != ord_id:
         return
 
-    order.state = state
-    order.px = float(data['fillPx'])
-    order.ctime = data['cTime']
-    order.utime = data['uTime']
-    ORDER.value = order
-    PENDING.value = None
-    await log.info('confirm order-%d at px-%f' % (order.index(), order.px))
+    pending.state = state
+    pending.px = float(data['fillPx'])
+    pending.ctime = data['cTime']
+    pending.utime = data['uTime']
+    morder.set_order(pending)
+    morder.set_pending(None)
+    await log.info('confirm order=%d at px=%f' % (pending.index(), pending.px))
