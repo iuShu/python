@@ -11,6 +11,7 @@ from martin.strategy import strategy
 from martin.initiator import initiate
 from martin.stalker import stalk
 from martin.confirm import confirm
+from martin.algo import algo
 from martin.checker import check
 
 
@@ -59,6 +60,7 @@ async def main():
         asyncio.create_task(initiate()),
         asyncio.create_task(stalk()),
         asyncio.create_task(confirm()),
+        asyncio.create_task(algo()),
         asyncio.create_task(check()),
     ]
     await asyncio.wait(async_tasks)

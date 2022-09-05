@@ -1,9 +1,6 @@
-import copy
-
-from src.calc import add, mlt, sub, div
 from src.base import repo
+from src.calc import add, mlt, sub, div
 from src.okx.consts import *
-
 
 KEY_ORDER_RUNNING = 'morder-running'
 KEY_ORDER_PENDING = 'morder-pending'
@@ -97,15 +94,18 @@ class MartinOrder:
         if self._index == self._max_order:
             return None
 
-        nxt: MartinOrder = copy.deepcopy(self)
-        nxt.prev, nxt.next = None, None     # reset
-        nxt._index += 1
-        nxt.px = self.follow_price()
-        nxt.pos = self.pos * 2
+        nxt = MartinOrder(pos=self.pos * 2)
+        nxt.pos_type = self.pos_type
+        nxt.pos_side = self.pos_side
+        nxt.open_type = self.open_type
+        nxt.close_type = self.close_type
         nxt.ord_type = ORDER_TYPE_LIMIT
-        nxt.state = 'filled'
-        nxt.ctime = None
-        nxt.utime = None
+        nxt._follow_rate = self._follow_rate
+        nxt._profit_step_rate = self._profit_step_rate
+        nxt._max_order = self._max_order
+        nxt._index = self._index + 1
+        nxt._level = self._level
+        nxt.px = self.follow_price()
         nxt.prev = self
         self.next = nxt
         return nxt
