@@ -38,6 +38,10 @@ class Conn:
             self._conn.close()
             self._active = False
 
+    def ping(self, reconnect: bool):
+        if self._active:
+            self._conn.ping(reconnect)
+
 
 def connect(db_type=DEFAULT_DB_TYPE) -> Conn:
     try:
@@ -79,10 +83,14 @@ def columns_name(table: str, with_id=False) -> list:
 def query(sql: str, args=None):
     conn = DEF_CONN
     try:
-        cursor = conn.cursor()
-        cursor.execute(sql, args)
-        return cursor.fetchall()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, args)
+            return cursor.fetchall()
+        except Exception:
+            conn.ping(True)
     except Exception:
+        traceback.print_exc()
         return None
 
 
