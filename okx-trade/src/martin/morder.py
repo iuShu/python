@@ -1,8 +1,12 @@
 import copy
 
 from src.calc import add, mlt, sub, div
-from src.base import ValueHolder
+from src.base import repo
 from src.okx.consts import *
+
+
+KEY_ORDER_RUNNING = 'morder-running'
+KEY_ORDER_PENDING = 'morder-pending'
 
 
 class MartinOrder:
@@ -115,12 +119,26 @@ class MartinOrder:
         return self
 
     def __str__(self):
-        return f'{self.pos} {self.pos_type} {self.pos_side} {self._follow_rate} {self._profit_step_rate} {self._index} ' \
-               f'{self._max_order} {self.px} {self.state} {self.ord_id}'
+        return f'{self.pos} {self.pos_type} {self.pos_side} {self._follow_rate} {self._profit_step_rate} ' \
+               f'{self._index} {self._max_order} {self.px} {self.state} {self.ord_id} {self.algo_id} ' \
+               f'{self.extra_margin} {self.prev.ord_id if self.prev else -1} {self.prev.algo_id if self.prev else -1}' \
+               f' {self.next.ord_id if self.next else -1} {self.next.algo_id if self.next else -1}'
 
 
-ORDER = ValueHolder()
-PENDING = ValueHolder()
+def order() -> MartinOrder:
+    return repo.get(KEY_ORDER_RUNNING)
+
+
+def set_order(o):
+    repo[KEY_ORDER_RUNNING] = o
+
+
+def pending() -> MartinOrder:
+    return repo.get(KEY_ORDER_PENDING)
+
+
+def set_pending(o):
+    repo[KEY_ORDER_PENDING] = o
 
 
 def check_attributes(attr, name: str):

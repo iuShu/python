@@ -2,7 +2,7 @@ import asyncio
 from asyncio import Queue
 from src.base import log
 from src.okx import stream
-from .morder import ORDER, PENDING
+from . import morder
 from .setting import INST_ID
 
 # TODO store history data to determine whether it should regardless algo order and close all position manually
@@ -21,7 +21,7 @@ async def monitoring():
         try:
             if stream.close_signal(tick):
                 break
-            if not ORDER.value:
+            if not morder.order():
                 continue
 
             data = tick[0]

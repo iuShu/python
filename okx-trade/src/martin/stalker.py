@@ -4,7 +4,7 @@ from src.base import log
 from src.config import conf
 from src.okx import stream, client
 from src.okx.consts import STATE_FILLED
-from .morder import MartinOrder, ORDER
+from . import morder
 from .opertaions import place_order, place_algo, add_margin_balance
 from .setting import EXCHANGE
 
@@ -30,10 +30,12 @@ async def stalk():
 
 
 async def place_next(cli: client.AioClient):
-    order: MartinOrder = ORDER.value
-    if not order or order.state != STATE_FILLED or order.next.ord_id:
+    order = morder.order()
+    if not order or order.state != STATE_FILLED:
+        return
+    if order.next and order.next.ord_id:
         return
 
     nxt = order.create_next()
-    await log.info('place next at px-%f pos-%d for order-%d' % (order.index(), nxt.pos, nxt.px))
+    await log.info('place next at px=%f pos=%d for order=%d' % (nxt.px, nxt.pos, order.index()))
     await place_order(nxt, cli)
