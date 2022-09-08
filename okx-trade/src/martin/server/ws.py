@@ -133,8 +133,12 @@ async def notify(data: dict, ws):
         if type(msg) != dict or 'topic' not in msg or 'msg' not in msg:
             await ws.send_json(_wrap_resp(op=op_notify, mid=data['mid'], code=code_400, msg=msg_400))
             return
-        for each in channels[msg['topic']]:
+        subscribers: list = channels[msg['topic']]
+        for each in subscribers:
             channel: web.WebSocketResponse = each
+            if channel.closed:
+                subscribers.remove(channel)
+                continue
             await channel.send_json(_wrap_resp(op=op_notify, data=json.dumps(msg)))
         await ws.send_json(_wrap_resp(op=op_notify, mid=data['mid']))
 
