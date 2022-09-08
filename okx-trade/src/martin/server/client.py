@@ -11,15 +11,17 @@ from src.martin.setting import NOTIFY_NAME, KEY_NOTIFY_MSG
     send message format
     {
         'op': str,
-        'mid': number,
+        'cid': int
+        'mid': int,
         'data': obj
     }
-    
+
     receive message format
     {
-        'code': 200,
+        'op': str,
+        'code': int,
         'msg': '',
-        'mid': number,
+        'mid': int,
         'data': obj
     }
 '''
