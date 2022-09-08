@@ -39,4 +39,4 @@ async def handle_req(request: Request):
 
 app = web.Application()
 app.add_routes(routes)
-web.run_app(app)
+web.run_app(app, port=5889)
