@@ -4,6 +4,7 @@ import traceback
 
 from aiohttp import web, WSMsgType, WSMessage
 from aiohttp.web_request import Request
+from src.martin.setting import *
 
 '''
     send message format
@@ -25,16 +26,12 @@ from aiohttp.web_request import Request
 '''
 routes = web.RouteTableDef()
 id_pool = [0]
-secret = '5889@notify'
+
 logins = dict()
 channels = {
-    'notify': [],
+    NOTIFY_OP_NOTIFY: [],
+    NOTIFY_OP_OPERATE: [],
 }
-op_login = 'login'
-op_notify = 'notify'
-op_subscribe = 'subscribe'
-op_operate = 'operate'
-close_signal = 'ws-close'
 
 code_200 = 200
 msg_200 = 'success'
@@ -73,8 +70,8 @@ async def handle_req(request: Request):
             if not data:
                 await ws.send_json(_wrap_resp(op='', code=code_400, msg=msg_400))
                 continue
-            if data.get('op') == op_operate and data.get('data') == close_signal:
-                await ws.send_json(_wrap_resp(op=op_operate, mid=data['mid']))
+            if data.get('op') == NOTIFY_OP_OPERATE and data.get('data') == NOTIFY_CLOSE_SIGNAL:
+                await ws.send_json(_wrap_resp(op=NOTIFY_OP_OPERATE, mid=data['mid']))
                 await ws.close()
                 break
             await handle_recv(ws, data)
@@ -100,38 +97,38 @@ async def handle_recv(ws, data: dict):
 
 
 async def login(data: dict, ws):
-    if data['op'] != op_login:
+    if data['op'] != NOTIFY_OP_LOGIN:
         return
-    if data['data'] != secret:
-        await ws.send_json(_wrap_resp(op=op_login, mid=data['mid'], code=code_402, msg=msg_402))
+    if data['data'] != NOTIFY_SERVICE_SECRET:
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_LOGIN, mid=data['mid'], code=code_402, msg=msg_402))
     else:
         logins[data['cid']] = 1
-        await ws.send_json(_wrap_resp(op=op_login, mid=data['mid'], msg='login success'))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_LOGIN, mid=data['mid'], msg='login success'))
 
 
 async def subscribe(data: dict, ws):
-    if data['op'] != op_subscribe:
+    if data['op'] != NOTIFY_OP_SUBSCRIBE:
         return
     if not _is_login(data):
-        await ws.send_json(_wrap_resp(op=op_subscribe, mid=data['mid'], code=code_401, msg=msg_401))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_SUBSCRIBE, mid=data['mid'], code=code_401, msg=msg_401))
     elif data['data'] not in channels:
-        await ws.send_json(_wrap_resp(op=op_subscribe, mid=data['mid'], code=code_404, msg=msg_404))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_SUBSCRIBE, mid=data['mid'], code=code_404, msg=msg_404))
     else:
         channels[data['data']].append(ws)
-        await ws.send_json(_wrap_resp(op=op_subscribe, mid=data['mid'], msg='subscribe success'))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_SUBSCRIBE, mid=data['mid'], msg='subscribe success'))
 
 
 async def notify(data: dict, ws):
-    if data['op'] != op_notify:
+    if data['op'] != NOTIFY_OP_NOTIFY:
         return
     if not _is_login(data):
-        await ws.send_json(_wrap_resp(op=op_notify, mid=data['mid'], code=code_401, msg=msg_401))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_401, msg=msg_401))
     elif not data['data']:
-        await ws.send_json(_wrap_resp(op=op_notify, mid=data['mid'], code=code_415, msg=msg_415))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_415, msg=msg_415))
     else:
         msg = data['data']
         if type(msg) != dict or 'topic' not in msg or 'msg' not in msg:
-            await ws.send_json(_wrap_resp(op=op_notify, mid=data['mid'], code=code_400, msg=msg_400))
+            await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_400, msg=msg_400))
             return
         subscribers: list = channels[msg['topic']]
         for each in subscribers:
@@ -139,8 +136,8 @@ async def notify(data: dict, ws):
             if channel.closed:
                 subscribers.remove(channel)
                 continue
-            await channel.send_json(_wrap_resp(op=op_notify, data=json.dumps(msg)))
-        await ws.send_json(_wrap_resp(op=op_notify, mid=data['mid']))
+            await channel.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, data=json.dumps(msg)))
+        await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid']))
 
 
 def client_id() -> int:
