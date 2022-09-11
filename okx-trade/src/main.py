@@ -65,7 +65,7 @@ async def main():
         # asyncio.create_task(algo()),
         # asyncio.create_task(check()),
         asyncio.create_task(notifying()),
-        # asyncio.create_task(reacting()),
+        asyncio.create_task(reacting()),
     ]
     await asyncio.wait(async_tasks)
 
