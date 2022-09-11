@@ -59,22 +59,18 @@ async def hello(request: Request):
 
 @routes.get('/ws')
 async def handle_req(request: Request):
-    ws = web.WebSocketResponse()
+    ws = web.WebSocketResponse(autoping=True)
     await ws.prepare(request)
     await ws.send_json(_wrap_resp(op='init', data=client_id()))
-    async for msg in ws:
-        msg: WSMessage = msg
+    while not ws.closed:
+        msg: WSMessage = await ws.receive()
+        print('ws recv', msg)
         if msg.type == WSMsgType.TEXT:
             data = validate(msg)
-            # print('recv', data)
-            if not data:
+            if data:
+                await handle_recv(ws, data)
+            else:
                 await ws.send_json(_wrap_resp(op='', code=code_400, msg=msg_400))
-                continue
-            if data.get('op') == NOTIFY_OP_OPERATE and data.get('data') == NOTIFY_CLOSE_SIGNAL:
-                await ws.send_json(_wrap_resp(op=NOTIFY_OP_OPERATE, mid=data['mid']))
-                await ws.close()
-                break
-            await handle_recv(ws, data)
     # print('ws connection closed')
     return ws
 
@@ -119,18 +115,23 @@ async def subscribe(data: dict, ws):
 
 
 async def notify(data: dict, ws):
-    if data['op'] != NOTIFY_OP_NOTIFY:
+    op = data['op']
+    if op not in [NOTIFY_OP_OPERATE, NOTIFY_OP_NOTIFY]:
         return
     if not _is_login(data):
         await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_401, msg=msg_401))
     elif not data['data']:
         await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_415, msg=msg_415))
     else:
-        msg = data['data']
-        if type(msg) != dict or 'topic' not in msg or 'msg' not in msg:
-            await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_400, msg=msg_400))
-            return
-        subscribers: list = channels[msg['topic']]
+        msg, subscribers = data['data'], []
+        if op == NOTIFY_OP_NOTIFY:
+            if type(msg) != dict or 'topic' not in msg or 'msg' not in msg:
+                await ws.send_json(_wrap_resp(op=NOTIFY_OP_NOTIFY, mid=data['mid'], code=code_400, msg=msg_400))
+                return
+            subscribers: list = channels[msg['topic']]
+        elif op == NOTIFY_OP_OPERATE:
+            subscribers: list = channels[NOTIFY_OP_OPERATE]
+
         for each in subscribers:
             channel: web.WebSocketResponse = each
             if channel.closed:

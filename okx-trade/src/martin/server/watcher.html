@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Watcher</title>
+</head>
+<body>
+    <label for="domain">ws</label>
+    <select id="domain">
+        <option value="ws://localhost:5889/ws">localhost</option>
+    </select>
+    <button id="btn" onclick="connect()">connect</button>
+    <button onclick="close_machine()">close</button>
+    <br>
+    <label for="state">state: </label><span id="state">...</span><br>
+    <label for="cid">client: </label><span id="cid">...</span><br>
+    <input id="data" type="text" />
+    <hr>
+    <ul id="recv-list">
+        <li>xmmamama</li>
+        <li>xmmamama</li>
+    </ul>
+</body>
+<script>
+    let ws, cid, mid = 0, count = 1;
+    function connect() {
+        document.getElementById('btn').disabled = 'true'
+        let url = document.getElementById('domain').value
+        ws = new WebSocket(url)
+        ws.onopen = function(evt) {
+            document.getElementById('state').innerText = 'connected'
+        }
+        ws.onmessage = function(evt) {
+            let packet = eval('(' + evt.data + ')')
+            let op = packet['op']
+            if (op === 'ping')
+                return
+            else if (op === 'init') {
+                cid = packet['data']
+                document.getElementById('cid').innerText = cid
+                send('login', '..')
+            }
+            else if (op === 'login') {
+                send('subscribe', 'notify')
+            }
+
+            let li = document.createElement('li')
+            li.innerText = (count + ' ' + packet['data'])
+            let ul = document.getElementById('recv-list')
+            ul.insertBefore(li, ul.firstChild)
+            count += 1
+        }
+        ws.onclose = function(evt) {
+            document.getElementById('state').innerText = 'closed'
+            document.getElementById('btn').disabled = ''
+        }
+    }
+
+    function close_machine() {
+        send('operate', 'ws-close')
+    }
+
+    function message_id() {
+        mid += 1
+        return mid
+    }
+
+    function send(op, data) {
+        if (ws === undefined)
+            return
+        packet = {
+            'op': op,
+            'cid': cid,
+            'mid': message_id(),
+            'data': data
+        }
+        ws.send(JSON.stringify(packet))
+    }
+</script>
+</html>
