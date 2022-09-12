@@ -64,7 +64,7 @@ async def handle_req(request: Request):
     await ws.send_json(_wrap_resp(op='init', data=client_id()))
     while not ws.closed:
         msg: WSMessage = await ws.receive()
-        print('recv:', msg)
+        # print('recv:', msg)
         if msg.type == WSMsgType.TEXT:
             data = validate(msg)
             if data:
@@ -132,7 +132,7 @@ async def notify(data: dict, ws):
             if channel.closed:
                 subscribers.remove(channel)
                 continue
-            await channel.send_json(_wrap_resp(op=op, data=json.dumps(msg)))
+            await channel.send_json(_wrap_resp(op=op, data=msg if type(msg) == str else json.dumps(msg)))
         await ws.send_json(_wrap_resp(op=op, mid=data['mid']))
 
 

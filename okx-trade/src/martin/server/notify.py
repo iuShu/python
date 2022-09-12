@@ -80,7 +80,6 @@ async def send(ws, pipe: Queue):
     pending = await pipe.get()
     await log.info('send %s %s' % (pending, ws.closed))
     await ws.send_json(_wrap_msg(NOTIFY_OP_NOTIFY, {'topic': NOTIFY_OP_NOTIFY, 'msg': pending}))
-    await log.info('end %s %s' % (pending, ws.closed))
 
 
 async def recv(ws) -> bool:
@@ -127,7 +126,6 @@ def pending_queue() -> Queue:
     if q is None:
         q = Queue()
         repo[KEY_NOTIFY_MSG] = q
-        q.put_nowait('first notify')
     return q
 
 

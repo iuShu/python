@@ -25,7 +25,7 @@ async def connect():
     await log.info('websocket start')
     interrupted, times = False, 0
     while True:
-        async with session.ws_connect(url=WSS_PUBLIC_URL, autoclose=False, autoping=False) as ws:
+        async with session.ws_connect(url=WSS_PUBLIC_URL, autoping=True) as ws:
             await log.info('websocket connected')
             repo[key_started] = True
             repo[key_running] = True

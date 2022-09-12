@@ -39,8 +39,7 @@ async def reacting():
 
     await log.info('remote start')
     while True:
-        # async with session.ws_connect(url=ws_url(conf), heartbeat=10.0) as ws:
-        async with session.ws_connect(url='ws://localhost:5889/ws', autoping=True, receive_timeout=3.0) as ws:
+        async with session.ws_connect(url=ws_url(conf), autoping=True) as ws:
             await init(ws, conf['secret'])
             while stream.running():
                 if not await recv(ws):
@@ -80,7 +79,7 @@ async def init(ws, secret: str):
     packet['data'] = NOTIFY_OP_OPERATE
     await ws.send_json(packet)
     msg = await ws.receive()
-    resp = json.loads(msg)
+    resp = json.loads(msg.data)
     if resp.get('code') == 200 and resp.get('mid') == 2:
         await log.info('remote subscribe ok')
     else:
@@ -90,7 +89,6 @@ async def init(ws, secret: str):
 
 async def recv(ws) -> bool:
     msg = await ws.receive()
-    print('remote recv', msg)
     if msg.type == WSMsgType.CLOSE or msg.type == WSMsgType.CLOSED:
         await log.warning('received close signal %s' % msg.type)
         return False
@@ -101,7 +99,7 @@ async def recv(ws) -> bool:
     resp = json.loads(msg.data)
     if 'op' not in resp or resp['op'] != NOTIFY_OP_OPERATE or resp['data'] != NOTIFY_CLOSE_SIGNAL:
         return True
-    await log.warning('recv close signal')
+    await log.fatal('recv close signal')
     raise SystemExit(1)
 
 
