@@ -9,14 +9,9 @@ async def place_order(order: morder.MartinOrder, client: AioClient) -> bool:
     created = client.create_order(inst_id=INST_ID, td_mode=order.pos_type, side=order.open_type,
                                   pos_side=order.pos_side, ord_type=order.ord_type, sz=str(order.pos), px=order.px)
     datas = await client.place_order(created)
-    if not datas:
-        return False
-
-    order.ord_id = datas[0]['ordId']
-    order.state = STATE_LIVE
-    morder.set_pending(order)
-    await log.info('placed order=%d with pos=%d at px=%s' % (order.index(), order.pos, order.px))
-    return True
+    if datas:
+        await log.info('placed order=%d with pos=%d at px=%s' % (order.index(), order.pos, order.px))
+        return True
 
 
 async def place_algo(client: AioClient) -> bool:
@@ -66,3 +61,29 @@ async def add_margin_balance(client: AioClient) -> bool:
     order.extra_margin = extra
     await log.info('order=%d added %f margin' % (order.index(), extra))
     return True
+
+
+async def close_pending(cli: AioClient):
+    pending = morder.pending()
+    if not pending or pending.state != STATE_LIVE:
+        return
+
+    datas = await cli.cancel_order(INST_ID, ord_id=pending.ord_id)
+    if not datas:
+        await log.warning('pending order=%d at px=%f fp=%d has been filled unexpectedly'
+                          % (pending.index(), pending.px, pending.full_pos()))
+        pending.as_first_order()
+        return
+    morder.set_pending(None)
+    await log.info('cancel pending order=%d at px=%f' % (pending.index(), pending.px))
+
+
+async def close_all_position(client: AioClient):
+    order = morder.order()
+    if not order or order.state != STATE_FILLED or not order.algo_id:
+        return
+
+    datas = await client.close_position(inst_id=INST_ID, mgn_mode=order.pos_type,
+                                        pos_side=order.pos_side, auto_cancel=True)
+    if datas:
+        return True

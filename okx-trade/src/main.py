@@ -15,6 +15,7 @@ from martin.algo import algo
 from martin.checker import check
 from martin.server.notify import notifying
 from martin.server.remote import reacting
+from martin.monitor import monitoring
 
 
 async def daemon(live: int):
@@ -57,15 +58,16 @@ async def main():
         # asyncio.create_task(use_case()),
         # asyncio.create_task(candles()),
         asyncio.create_task(wss_public()),
-        # asyncio.create_task(wss_private()),
+        asyncio.create_task(wss_private()),
         asyncio.create_task(strategy()),
-        # asyncio.create_task(initiate()),
-        # asyncio.create_task(stalk()),
-        # asyncio.create_task(confirm()),
-        # asyncio.create_task(algo()),
-        # asyncio.create_task(check()),
-        asyncio.create_task(notifying()),
-        asyncio.create_task(reacting()),
+        asyncio.create_task(monitoring()),
+        asyncio.create_task(confirm()),
+        asyncio.create_task(stalk()),
+        asyncio.create_task(algo()),
+        asyncio.create_task(check()),
+        asyncio.create_task(initiate()),
+        # asyncio.create_task(notifying()),
+        # asyncio.create_task(reacting()),
     ]
     await asyncio.wait(async_tasks)
 

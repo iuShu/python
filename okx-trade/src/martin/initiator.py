@@ -16,6 +16,7 @@ async def initiate():
     while not stream.started():
         await asyncio.sleep(.5)
 
+    await asyncio.sleep(5)  # waiting others
     await log.info('initiator start')
     while stream.running():
         tick = await pipe.get()
@@ -49,4 +50,5 @@ async def place_first(cli: client.AioClient) -> bool:
     order = morder.MartinOrder(pos=ORDER_START_POS, follow_rate=ORDER_FOLLOW_RATE,
                                profit_step_rate=ORDER_PROFIT_STEP_RATE, max_order=ORDER_MAX_COUNT,
                                pos_type=ORDER_POS_TYPE, pos_side=ORDER_POS_SIDE.name)
+    morder.set_pending(order)
     return await place_order(order, cli)

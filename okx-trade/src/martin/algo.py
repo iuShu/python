@@ -4,7 +4,7 @@ from src.base import log
 from src.config import conf
 from src.okx import client, private as pstream
 from src.okx.consts import STATE_FILLED, ALGO_STATE_EFFECTIVE
-from . import morder
+from . import morder, opertaions as opr
 from .setting import EXCHANGE, INST_ID, INST_TYPE
 
 
@@ -41,23 +41,8 @@ async def confirm_deal(data: dict, cli: client.AioClient):
         return
     if order.algo_id != algo_id:
         return
-    await close_pending(cli)
+    await opr.close_pending(cli)
     await ensure_deal(cli)
-
-
-async def close_pending(cli: client.AioClient):
-    pending = morder.pending()
-    if not pending:
-        return
-
-    datas = await cli.cancel_order(INST_ID, ord_id=pending.ord_id)
-    if not datas:
-        await log.warning('pending order=%d at px=%f fp=%d has been filled unexpectedly'
-                          % (pending.index(), pending.px, pending.full_pos()))
-        pending.as_first_order()
-        return
-    morder.set_pending(None)
-    await log.info('cancel pending order=%d at px=%f' % (pending.index(), pending.px))
 
 
 async def ensure_deal(cli: client.AioClient):
@@ -79,5 +64,5 @@ async def ensure_deal(cli: client.AioClient):
         return
     morder.set_order(None)
 
-    await log.warning('stop all in development')
-    raise SystemExit(1)
+    await log.warning('round end, go to next')
+    # raise SystemExit(1)

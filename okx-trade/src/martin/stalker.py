@@ -37,5 +37,7 @@ async def place_next(cli: client.AioClient):
         return
 
     nxt = order.create_next()
+    if not nxt:
+        return
     await log.info('place next at px=%f pos=%d for order=%d' % (nxt.px, nxt.pos, order.index()))
     await place_order(nxt, cli)

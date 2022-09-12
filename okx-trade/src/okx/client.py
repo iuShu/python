@@ -157,6 +157,16 @@ class AioClient:
             params['loanTrans'] = loan_trans
         return await self.post(consts.MARGIN_BALANCE, params)
 
+    async def close_position(self, inst_id: str, mgn_mode: str, pos_side='', ccy='', auto_cancel=False):
+        params = {'instId': inst_id, 'mgnMode': mgn_mode}
+        if pos_side:
+            params['posSide'] = pos_side
+        if ccy:
+            params['ccy'] = ccy
+        if auto_cancel:
+            params['autoCxl'] = 'true'
+        return await self.post(consts.CLOSE_POSITION, params)
+
 
 async def create(info: dict, test=False) -> AioClient:
     return AioClient(info['apikey'], info['secretkey'], info['passphrase'], test)
