@@ -30,3 +30,6 @@ NOTIFY_OP_NOTIFY = 'notify'
 NOTIFY_OP_SUBSCRIBE = 'subscribe'
 NOTIFY_OP_OPERATE = 'operate'
 NOTIFY_CLOSE_SIGNAL = 'ws-close'
+
+key_strategy_repo = 'strategy-repo'
+key_monitor_repo = 'monitor-repo'

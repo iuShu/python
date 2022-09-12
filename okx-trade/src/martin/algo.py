@@ -42,27 +42,5 @@ async def confirm_deal(data: dict, cli: client.AioClient):
     if order.algo_id != algo_id:
         return
     await opr.close_pending(cli)
-    await ensure_deal(cli)
+    await opr.ensure_deal(cli)
 
-
-async def ensure_deal(cli: client.AioClient):
-    order = morder.order()
-    if not order or order.state != STATE_FILLED:
-        return
-
-    info = await cli.get_order_info(inst_id=INST_ID, ord_id=order.ord_id)
-    state, pnl = info['state'], int(info['pnl'])
-    if state != STATE_FILLED:
-        return
-
-    if pnl > 0:
-        await log.info('algo order=%d WON %f !!!' % (order.index(), pnl))
-    elif pnl < 0:
-        await log.warning('algo loss %f at order=%d' % (pnl, order.index()))
-    else:
-        await log.warning('unexpected data order=%d pnl=%d' % (order.index(), pnl))
-        return
-    morder.set_order(None)
-
-    await log.warning('round end, go to next')
-    # raise SystemExit(1)

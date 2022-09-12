@@ -87,3 +87,26 @@ async def close_all_position(client: AioClient):
                                         pos_side=order.pos_side, auto_cancel=True)
     if datas:
         return True
+
+
+async def ensure_deal(cli: AioClient):
+    order = morder.order()
+    if not order or order.state != STATE_FILLED:
+        return
+
+    info = await cli.get_order_info(inst_id=INST_ID, ord_id=order.ord_id)
+    if not info or info[0]['state'] != STATE_FILLED:
+        return
+
+    pnl = float(info[0]['pnl'])
+    if pnl > 0:
+        await log.info('algo order=%d WON %f !!!' % (order.index(), pnl))
+    elif pnl < 0:
+        await log.warning('algo loss %f at order=%d' % (pnl, order.index()))
+    else:
+        # await log.warning('unexpected data order=%d pnl=%d' % (order.index(), pnl))
+        return
+    morder.set_order(None)
+
+    await log.warning('round end, go to next')
+    # raise SystemExit(1)

@@ -2,8 +2,7 @@ import asyncio
 import json
 
 import aiohttp
-from . import consts
-from . import utils
+from src.okx import consts, utils
 from src.base import log
 
 
@@ -17,7 +16,8 @@ class AioClient:
         self.test = test
 
     async def get(self, path: str, params=None):
-        url = consts.API_URL + path + (utils.parse_params_to_str(params) if params else '')
+        path += (utils.parse_params_to_str(params) if params else '')
+        url = consts.API_URL + path
         timestamp = utils.get_timestamp()
         signature = utils.sign(utils.pre_hash(timestamp, consts.GET, path, ''), self.secretkey)
         headers = utils.get_header(self.apikey, signature.decode('utf-8'), timestamp, self.passphrase)
@@ -25,7 +25,7 @@ class AioClient:
             headers['x-simulated-trading'] = '1'
         async with self.session.get(url=url, headers=headers) as resp:
             if not str(resp.status).startswith('2'):
-                await log.error('Get status %d' % resp.status)
+                await log.error('Get status %d %s' % (resp.status, await resp.text()))
             else:
                 try:
                     resp = await resp.json()
@@ -43,7 +43,7 @@ class AioClient:
             headers['x-simulated-trading'] = '1'
         async with self.session.post(url=url, headers=headers, json=params) as resp:
             if not str(resp.status).startswith('2'):
-                await log.error('Post status %d' % resp.status)
+                await log.error('Post status %d %s' % (resp.status, await resp.text()))
             else:
                 try:
                     resp = await resp.json()

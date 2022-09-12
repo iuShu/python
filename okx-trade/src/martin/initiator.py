@@ -4,7 +4,7 @@ from src.base import log
 from src.config import conf
 from src.okx import stream, client
 from . import morder
-from .opertaions import place_order
+from .opertaions import place_order, ensure_deal
 from .strategy import satisfy
 from .setting import *
 
@@ -24,6 +24,8 @@ async def initiate():
             if stream.close_signal(tick):
                 break
             if morder.order() or morder.pending():
+                await ensure_deal(cli)
+                await asyncio.sleep(2)
                 continue
 
             data = tick[0]

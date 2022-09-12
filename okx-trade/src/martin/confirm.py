@@ -23,7 +23,7 @@ async def confirm():
             if pstream.close_signal(msg):
                 break
             data = msg[0]
-            # await log.info('confirm recv %s' % data)
+            await log.info('confirm recv %s' % data)
             await confirm_filled(data)
         except Exception:
             await log.error('confirm error', exc_info=True)
@@ -35,7 +35,7 @@ async def confirm():
 async def confirm_filled(data: dict):
     ord_id, state = data['ordId'], data['state']
     pending = morder.pending()
-    await log.info('confirm %s %s %s %s' % (ord_id, state, state == STATE_FILLED, pending))
+    # await log.info('confirm %s %s %s %s' % (ord_id, state, state == STATE_FILLED, pending))
     if state == STATE_LIVE:
         pending.ord_id = ord_id
         pending.state = state

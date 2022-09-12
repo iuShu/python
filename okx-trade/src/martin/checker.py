@@ -3,6 +3,7 @@ import os
 
 from src.base import log
 from src.martin import morder
+from src.martin import strategy, monitor
 
 
 async def check():
@@ -35,5 +36,6 @@ async def update_prop(loc):
     if prop['order.next.check']:
         await log.info('[next] order %s' % (o.next if o else '-'))
     await log.info('[now] pending %s' % (p if p else '-'))
-
+    await log.info('[strategy] MA%d %f' % strategy.current_data())
+    await log.info('[monitor] %s %s' % monitor.current_data())
 

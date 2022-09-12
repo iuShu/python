@@ -20,7 +20,7 @@ async def stalk():
             await place_algo(cli)
             await add_margin_balance(cli)
             await place_next(cli)
-            await asyncio.sleep(.3)
+            await asyncio.sleep(1)
         except Exception:
             await log.error('stalk error', exc_info=True)
         finally:
@@ -40,4 +40,5 @@ async def place_next(cli: client.AioClient):
     if not nxt:
         return
     await log.info('place next at px=%f pos=%d for order=%d' % (nxt.px, nxt.pos, order.index()))
+    morder.set_pending(nxt)
     await place_order(nxt, cli)
