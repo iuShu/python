@@ -127,12 +127,15 @@ async def notify(data: dict, ws):
     else:
         msg = data['data']
         subscribers: list = channels[NOTIFY_OP_OPERATE if op == NOTIFY_OP_OPERATE else msg['topic']]
-        for each in subscribers:
-            channel: web.WebSocketResponse = each
+        removed = []
+        for i in range(len(subscribers)):
+            channel: web.WebSocketResponse = subscribers[i]
             if channel.closed:
-                subscribers.remove(channel)
-                continue
-            await channel.send_json(_wrap_resp(op=op, data=msg if type(msg) == str else json.dumps(msg)))
+                removed.append(i)
+            else:
+                await channel.send_json(_wrap_resp(op=op, data=msg if type(msg) == str else json.dumps(msg)))
+        for idx in removed:
+            subscribers.pop(idx)
         await ws.send_json(_wrap_resp(op=op, mid=data['mid']))
 
 
