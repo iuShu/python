@@ -116,10 +116,10 @@ class ZeroListener(Listener, metaclass=ABCMeta):
         pass
 
     def is_stop(self):
-        return True
+        return False
 
     def is_finish_stop(self):
-        pass
+        return False
 
 
 class InstListener(ZeroListener):

@@ -30,7 +30,7 @@ class _OkxWsClient:
         session = aiohttp.ClientSession()
         interrupted, reconnect_time, self._running = False, 1, True
         while self._running:
-            async with session.ws_connect(url=self._url, timeout=self._read_timeout, heartbeat=self._heartbeat_interval, autoping=True) as ws:
+            async with session.ws_connect(url=self._url, timeout=self._read_timeout, heartbeat=self._heartbeat_interval, autoping=True, verify_ssl=False) as ws:
                 logging.info(f'client connected to {self._url}')
                 self.ws = ws
                 if reconnect_time > 1:
@@ -129,14 +129,9 @@ class OkxPublicClient(_OkxWsClient):
     async def subscribe(self):
         channels, deduplicate = [], set()
         for listener in self.listeners:
-            if hash(listener.inst_id() + 'tickers') not in deduplicate:
-                channels.append({'instId': listener.inst_id(), 'channel': 'tickers'})
-                deduplicate.add(hash(listener.inst_id() + 'tickers'))
-
-            candle_period = trade(listener.inst())['indicator']['period']
-            if hash(listener.inst_id() + 'candle' + candle_period) not in deduplicate:
-                channels.append({'instId': listener.inst_id(), 'channel': 'candle' + candle_period})
-                deduplicate.add(hash(listener.inst_id() + 'candle' + candle_period))
+            if (hash(listener.inst_id() + listener.channel())) not in deduplicate:
+                channels.append({'instId': listener.inst_id(), 'channel': listener.channel()})
+                deduplicate.add(hash(listener.inst_id() + listener.channel()))
         packet = {'op': 'subscribe', 'args': channels}
         self.send(packet)
 
@@ -168,39 +163,39 @@ class OkxPublicClient(_OkxWsClient):
             raise SystemExit(1)
 
 
-class OkxPrivateClient(OkxPublicClient):
-
-    async def after_connected(self):
-        await self.login()
-        await self.subscribe()
-
-    async def on_interrupted(self):
-        notifier.ws_interrupt('ws private client interrupted')
-
-    async def on_reconnect(self):
-        notifier.ws_interrupt('ws private client reconnected')
-
-    async def dispatch(self, data: dict):
-        data['from'] = 'private'
-        for listener in self.listeners:
-            if listener.consumable(data):
-                await listener.consume(data)
-
-    async def login(self):
-        pass
-
-    async def subscribe(self):
-        channels = []
-        for listener in self.listeners:
-            channels.append({'instId': listener.inst_id(), 'channel': 'orders'})
-        packet = {'op': 'subscribe', 'args': channels}
-        self.send(packet)
-
-        self.subscribing.clear()
-        self.subscribed.clear()
-        for channel in channels:
-            self.subscribing[hash(channel['instId'] + channel['channel'])] = channel
-        await self.confirm_subscribe()
+# class OkxPrivateClient(OkxPublicClient):
+#
+#     async def after_connected(self):
+#         await self.login()
+#         await self.subscribe()
+#
+#     async def on_interrupted(self):
+#         notifier.ws_interrupt('ws private client interrupted')
+#
+#     async def on_reconnect(self):
+#         notifier.ws_interrupt('ws private client reconnected')
+#
+#     async def dispatch(self, data: dict):
+#         data['from'] = 'private'
+#         for listener in self.listeners:
+#             if listener.consumable(data):
+#                 await listener.consume(data)
+#
+#     async def login(self):
+#         pass
+#
+#     async def subscribe(self):
+#         channels = []
+#         for listener in self.listeners:
+#             channels.append({'instId': listener.inst_id(), 'channel': 'orders'})
+#         packet = {'op': 'subscribe', 'args': channels}
+#         self.send(packet)
+#
+#         self.subscribing.clear()
+#         self.subscribed.clear()
+#         for channel in channels:
+#             self.subscribing[hash(channel['instId'] + channel['channel'])] = channel
+#         await self.confirm_subscribe()
 
 
 if __name__ == '__main__':

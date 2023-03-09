@@ -81,10 +81,10 @@ class DingtalkNotifier(Notifier):
         self._send('System Exit', msg)
 
     def _send(self, title: str, msg: str):
-        logging.info('notify %s' % title)
         if ntf('mute_all'):
             return
 
+        logging.info('notify %s' % title)
         packet = {'msgtype': 'markdown', 'markdown': {'title': title, 'text': msg}}
         if not self._rate_limit(packet):
             self._order += 1

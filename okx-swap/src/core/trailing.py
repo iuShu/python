@@ -20,13 +20,13 @@ class Trailing(DefaultStrategy):
         self._max_profit_px = .0
 
     async def handle(self, data):
-        logging.debug("trailing %s %s %s" % (self.finished_stop, self.stopped, data))
-        # if self._trading:
-        #     self._follow_order(data['data'][0])
-        #     self._mock_algo(data['data'][0])
-        #     self._take_profit(data['data'][0])
-        # else:
-        #     self._first_order(data['data'][0])
+        # logging.debug("trailing %s %s %s" % (self.finished_stop, self.stopped, data))
+        if self._trading:
+            self._follow_order(data['data'][0])
+            self._mock_algo(data['data'][0])
+            self._take_profit(data['data'][0])
+        else:
+            self._first_order(data['data'][0])
 
     def _first_order(self, data: dict):
         conf = trade(self.inst())

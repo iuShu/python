@@ -95,7 +95,7 @@ class EmaIndicator(ZeroListener, Indicator):
         self._ts = ts
         self._ema = self._calc(cpx, self._ema)
         self._history.insert(0, [cpx, self._ema, ts])
-        logging.info('%s %s close=%s ema%d=%s' % (self.inst(), self.ts2format(ts), cpx, self._ema_period, self._ema))
+        logging.info('%s %s cpx=%s ema%d=%s' % (self.inst(), self.ts2format(ts), cpx, self._ema_period, self._ema))
 
     def trend(self) -> int:
         """

@@ -25,7 +25,7 @@ def analysis():
             desc = [str(idx), batch['pos_side'], str(batch['pnl'])]
             for order in batch['orders']:
                 desc.append(str(order['px']))
-            desc.append(str(calc_rate(batch['avg'], float(desc[-1]))) + '%')
+            desc.append(str(calc_rate(batch['avg'], float(desc[-1]), batch['lever'])) + '%')
             if batch['pnl'] < 0:
                 desc.append('x')
             idx += 1
@@ -80,8 +80,8 @@ def calc_pnl(avg: float, cpx: float, ttl_sz: float, pos_side: str) -> float:
     return float(mlt(diff, ttl_sz))
 
 
-def calc_rate(from_px: float, to_px: float) -> float:
-    return round(abs(mlt(div(sub(from_px, to_px), from_px), 100)), 2)
+def calc_rate(from_px: float, to_px: float, lever=1.0) -> float:
+    return round(abs(mlt(mlt(div(sub(from_px, to_px), from_px), lever), 100)), 2)
 
 
 def _batch(inst, pos_side, lv=75, fv=10, st='', et='', avg=.0, mpx=.0) -> dict:
