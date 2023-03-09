@@ -105,7 +105,7 @@ class Trailing(DefaultStrategy):
 
         rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
         if rate >= conf['range']:
-            logging.info('%s take profit by trailing range %s' % (self.inst(), round(rate, 2)))
+            logging.info('%s take profit by trailing range %s' % (self.inst(), round(rate, 6)))
             self._order_close(px)
 
     def _order_place(self, px, sz):
@@ -130,9 +130,9 @@ class Trailing(DefaultStrategy):
         pnl = calc_pnl(avg_px, px, ttl_sz, self._pos_side)
         ap_rate, mp_rate = calc_rate(avg_px, px), calc_rate(self._max_profit_px, avg_px)
         logging.info('%s %d close at %s %s %dx %s pnl=%s avg=%s(%s) max=%s(%s)'
-                     % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, self._max_profit_px, ap_rate, mp_rate))
+                     % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))
         notifier.order_closed('%s %d close at %s %s\n %dx %s pnl=%s\navg=%s(%s) max=%s(%s)'
-                              % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, self._max_profit_px, ap_rate, mp_rate))
+                              % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))
         self._idx = 0
         self._orders.clear()
         self._pos_side = ''

@@ -9,16 +9,16 @@ from src.rest import api
 from src.listener import ZeroListener
 
 period2ms = {
-    '1m': 60000,
-    '2m': 60000 * 2,
-    '5m': 60000 * 5,
-    '10m': 60000 * 10,
-    '15m': 60000 * 15,
-    '30m': 60000 * 30,
-    '1H': 60000 * 60,
-    '4H': 60000 * 60 * 4,
-    '1D': 60000 * 60 * 4 * 24,
-    '1W': 60000 * 60 * 4 * 24 * 7,
+    '1m': 60,
+    '2m': 60 * 2,
+    '5m': 60 * 5,
+    '10m': 60 * 10,
+    '15m': 60 * 15,
+    '30m': 60 * 30,
+    '1H': 60 * 60,
+    '4H': 60 * 60 * 4,
+    '1D': 60 * 60 * 4 * 24,
+    '1W': 60 * 60 * 4 * 24 * 7,
 }
 
 
@@ -87,8 +87,6 @@ class EmaIndicator(ZeroListener, Indicator):
         ts = int(ticker[0][:-3])
         if ts - self._ts != period2ms[self._period]:
             logging.warning('unexpected data %s after %s' % (self.ts2format(ts), self.ts2format(self._ts)))
-            return
-        if ts <= self._ts:
             return
 
         cpx = float(ticker[4])
