@@ -75,17 +75,16 @@ class Trailing(DefaultStrategy):
                 self._order_fill(px, sizes[self._idx])
                 return
 
-        sl_px = stop_loss(self.inst(), fpx, self._pos_side)
-        if not is_profit(self._pos_side, sl_px, px):
-            logging.info('%s close order by stop loss' % self.inst())
-            self._order_close(px)
-            return
-
-        sizes, rng = conf['try_sizes'], conf['range']
         if self._idx == len(sizes):     # all try_size orders have been filled
+            sl_px = stop_loss(self.inst(), fpx, self._pos_side)
+            if not is_profit(self._pos_side, sl_px, px):
+                logging.info('%s close order by stop loss' % self.inst())
+                self._order_close(px)
+                return
+
             rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
-            if rate >= rng:
-                logging.info('%s close order by trailing range %s' % (self.inst(), round(rate, 2)))
+            if rate >= conf['range']:
+                logging.info('%s close order by trailing range %s %s' % (self.inst(), round(rate, 6), px))
                 self._order_close(px)
 
     def _take_profit(self, data: dict):
