@@ -1,7 +1,8 @@
 import logging
+import time
 
 from src.core.strategy import DefaultStrategy
-from src.config import trade
+from src.config import trade, period2ms
 from src.calc import add, mlt, sub, div
 from src.notifier import notifier
 
@@ -19,13 +20,16 @@ class Trailing(DefaultStrategy):
         self._counter = 0
         self._max_profit_px = .0
 
+        self._consecutive_fails = 0
+        self._cooldown = 0
+
     async def handle(self, data):
         # logging.debug("trailing %s %s %s" % (self.finished_stop, self.stopped, data))
         if self._trading:
             self._follow_order(data['data'][0])
             self._mock_algo(data['data'][0])
             self._take_profit(data['data'][0])
-        else:
+        elif int(time.time()) >= self._cooldown:
             self._first_order(data['data'][0])
 
     def _first_order(self, data: dict):
@@ -132,6 +136,17 @@ class Trailing(DefaultStrategy):
                      % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))
         notifier.order_closed('%s %d close at %s %s\n %dx %s pnl=%s\navg=%s(%s) max=%s(%s)'
                               % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))
+
+        if pnl > 0:
+            self._consecutive_fails = 0
+        elif pnl <= 0:
+            self._consecutive_fails += 1
+            conf = trade(self.inst())
+            if self._consecutive_fails >= conf['trailing']['cooldown_fails']:
+                logging.info('%s %s cooling down' % (self.inst(), 'tailing'))
+                self._cooldown = int(time.time()) + period2ms[conf['indicator']['period']]
+                self._consecutive_fails = 0
+
         self._idx = 0
         self._orders.clear()
         self._pos_side = ''

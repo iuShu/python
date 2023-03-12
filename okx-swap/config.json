@@ -14,7 +14,7 @@
     "stop": 0
   },
   "log": {
-    "level": "DEBUG",
+    "level": "INFO",
     "format": "%(asctime)s %(levelname)s %(filename)s#%(funcName)s: %(message)s",
     "filename": "../okx-swap.log"
   },
@@ -64,7 +64,8 @@
       "trailing": {
         "lever": 100,
         "try_sizes": [1, 1],
-        "range": 0.002
+        "range": 0.002,
+        "cooldown_fails": 3
       }
     },
     "GMX": {
@@ -93,7 +94,8 @@
       "trailing": {
         "lever": 100,
         "try_sizes": [1, 1],
-        "range": 0.002
+        "range": 0.002,
+        "cooldown_fails": 3
       }
     },
     "CFX": {
@@ -113,7 +115,8 @@
       "trailing": {
         "lever": 75,
         "try_sizes": [100, 100],
-        "range": 0.005
+        "range": 0.004,
+        "cooldown_fails": 3
       }
     }
   }

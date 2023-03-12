@@ -10,6 +10,19 @@ cache = dict()
 history = dict()
 mt = os.path.getmtime(os.path.join(os.path.dirname(__file__), config_path))
 
+period2ms = {
+    '1m': 60,
+    '2m': 60 * 2,
+    '5m': 60 * 5,
+    '10m': 60 * 10,
+    '15m': 60 * 15,
+    '30m': 60 * 30,
+    '1H': 60 * 60,
+    '4H': 60 * 60 * 4,
+    '1D': 60 * 60 * 4 * 24,
+    '1W': 60 * 60 * 4 * 24 * 7,
+}
+
 
 def sys(key=''):
     return _conf()['sys'][key] if key else _conf()['sys']

@@ -4,22 +4,9 @@ import time
 from abc import ABCMeta, abstractmethod
 
 from src.calc import add, mlt, div
-from src.config import trade, last_ema, save_ema
+from src.config import trade, last_ema, save_ema, period2ms
 from src.rest import api
 from src.listener import ZeroListener
-
-period2ms = {
-    '1m': 60,
-    '2m': 60 * 2,
-    '5m': 60 * 5,
-    '10m': 60 * 10,
-    '15m': 60 * 15,
-    '30m': 60 * 30,
-    '1H': 60 * 60,
-    '4H': 60 * 60 * 4,
-    '1D': 60 * 60 * 4 * 24,
-    '1W': 60 * 60 * 4 * 24 * 7,
-}
 
 
 class Indicator(metaclass=ABCMeta):

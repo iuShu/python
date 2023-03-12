@@ -2,6 +2,9 @@ import asyncio
 import logging
 from asyncio import run, wait, create_task
 
+# import sys as system
+# system.path.append('/opt/trading/okx-swap')   # for prod
+
 from src.config import sys, trade, watch
 from src.client import OkxPublicClient
 from src.listener import InstListener
