@@ -71,6 +71,9 @@ class ZeroListener(Listener, metaclass=ABCMeta):
         self._inst_id = inst_id
         self._inst_type = inst_type
 
+        self._finish_stop = True
+        self._stop = True
+
         self.client = None
         self.msg_id = ''
 
@@ -107,19 +110,22 @@ class ZeroListener(Listener, metaclass=ABCMeta):
         pass
 
     def start(self):
-        pass
+        if self._stop and self._finish_stop:
+            self._finish_stop = False
+            self._stop = False
 
     def stop(self):
-        pass
+        self._stop = True
+        self._finish_stop = True
 
     def finish_stop(self, fs=True):
-        pass
+        self._finish_stop = fs
 
     def is_stop(self):
-        return False
+        return self._stop
 
     def is_finish_stop(self):
-        return False
+        return self._finish_stop
 
 
 class InstListener(ZeroListener):
@@ -136,6 +142,8 @@ class InstListener(ZeroListener):
 
         self._finish_stop = True
         self._stop = True
+
+        self._indicator = indicator
 
         for stg in sys('strategies'):
             if stg == 'martin':
@@ -191,6 +199,7 @@ class InstListener(ZeroListener):
         self._stop = True
         self._finish_stop = True
         self._trading.stop()
+        self._indicator.stop()
 
     def finish_stop(self, fs=True):
         self._finish_stop = fs
