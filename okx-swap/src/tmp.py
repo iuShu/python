@@ -1,3 +1,6 @@
+import decimal
+import time
+
 from calc import add, sub, mlt, div
 import pprint
 
@@ -17,12 +20,11 @@ def analysis():
                 repo[batch['inst']].append(batch)
                 batch = {}
     # pprint.pprint(repo)
-    print(len(repo['CFX']))
 
-    stat = [.0, 0, 0, 0, .0, .0]
+    stat = [.0, 0, 0, 0, .0, .0, 0, 0, .0]
     for k, batches in repo.items():
         for batch in batches:
-            desc = [str(batch['idx']), batch['pos_side'], str(batch['pnl'])]
+            desc = [str(batch['idx']), batch['pos_side'], str(time_diff(batch['st'], batch['et'])), str(batch['pnl'])]
             for order in batch['orders']:
                 desc.append(str(order['px']))
             desc.append(str(calc_rate(batch['avg'], float(desc[-1]), batch['lever'])) + '%')
@@ -34,7 +36,7 @@ def analysis():
             stat[1] = len(batch['orders']) - 1 + stat[1]
             if batch['pnl'] > 0:
                 stat[2] += 1
-            elif batch['pnl'] < 0:
+            elif batch['pnl'] <= 0:
                 stat[3] += 1
 
             if '%' in desc[-1] and stat[4] < float(desc[-1][:-1]):
@@ -42,12 +44,26 @@ def analysis():
             if desc[-1] == 'x' and stat[5] < float(desc[-2][:-1]):
                 stat[5] = float(desc[-2][:-1])
 
+            if batch['pos_side'] == 'long':
+                stat[6] += 1
+            elif batch['pos_side'] == 'short':
+                stat[7] += 1
+            else:
+                pprint.pprint(batch)
+
+            if float(desc[2]) > stat[8]:
+                stat[8] = float(desc[2])
+
     print('ttl pnl is', stat[0])
     print('ttl ord is', stat[1])
+    print('ttl bat is', len(repo['CFX']))
     print('ttl tpo is', stat[2])
     print('ttl slo is', stat[3])
-    print('max tpp is', stat[4])
-    print('max slp is', stat[5])
+    print('max tpp is', stat[4], '%')
+    print('max slp is', stat[5], '%')
+    print('ttl long is', stat[6])
+    print('ttl short is', stat[7])
+    print('max dur is', stat[8], 'm')
 
 
 def order_fill(line: str, batch: dict) -> dict:
@@ -92,6 +108,12 @@ def calc_pnl(avg: float, cpx: float, ttl_sz: float, pos_side: str) -> float:
 
 def calc_rate(from_px: float, to_px: float, lever=1.0) -> float:
     return round(abs(mlt(mlt(div(sub(from_px, to_px), from_px), lever), 100)), 2)
+
+
+def time_diff(from_t: str, to_t: str) -> float:
+    ft = time.mktime(time.strptime(from_t[:-4], '%Y-%m-%d %H:%M:%S'))
+    tt = time.mktime(time.strptime(to_t[:-4], '%Y-%m-%d %H:%M:%S'))
+    return round(decimal.Decimal(int(tt) - int(ft)) / decimal.Decimal(60), 2)
 
 
 def _batch(inst: str, pos_side: str, idx=0, lv=75, fv=10, st='', et='', avg=.0, mpx=.0) -> dict:

@@ -1,8 +1,8 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from src.config import sys, trade
-from src.core.martin import Martin
-from src.core.trailing import Trailing
+from src.core.shadow.martin import Martin
+from src.core.shadow.trailing import Trailing
 
 
 class Listener(metaclass=ABCMeta):
