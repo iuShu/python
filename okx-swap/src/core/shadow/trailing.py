@@ -36,7 +36,7 @@ class Trailing(DefaultStrategy):
         conf = trade(self.inst())
         pos_side = conf['pos_side']
         if not pos_side:
-            t = self.indicator().trend()
+            t = self.indicator().trend(float(data['last']))
             if t == 0:
                 return
             pos_side = 'long' if t > 0 else 'short'

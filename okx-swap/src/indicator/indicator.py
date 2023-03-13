@@ -12,7 +12,7 @@ from src.listener import ZeroListener
 class Indicator(metaclass=ABCMeta):
 
     @abstractmethod
-    def trend(self):
+    def trend(self, px: float):
         pass
 
 
@@ -62,6 +62,7 @@ class EmaIndicator(ZeroListener, Indicator):
         logging.info('%s %s ema is %s' % (self.inst(), self.ts2format(self._ts), self._ema))
 
         self.register_on_exit()
+        super().prepare()
 
     async def consume(self, data: dict):
         if len(data['data']) != 1:
@@ -82,7 +83,7 @@ class EmaIndicator(ZeroListener, Indicator):
         self._history.insert(0, [cpx, self._ema, ts])
         logging.info('%s %s cpx=%s ema%d=%s' % (self.inst(), self.ts2format(ts), cpx, self._ema_period, self._ema))
 
-    def trend(self) -> int:
+    def trend(self, px: float) -> int:
         """
         trend_candles: better be an even number
         :return: 1: long, -1: short, 0: not enough data
@@ -95,6 +96,12 @@ class EmaIndicator(ZeroListener, Indicator):
         for h in self._history[:decide]:
             long += 1 if h[0] > h[1] else 0
             short += 1 if h[0] <= h[1] else 0
+            logging.info('%s %s %s %s' % ('long' if h[0] > h[1] else 'short', h[0], '>' if h[0] > h[1] else '<=', h[1]))
+        if long == short:
+            current_ema = self._history[0][1]
+            long += 1 if px > current_ema else 0
+            short += 1 if px <= current_ema else 0
+            logging.info('%s %s %s %s' % ('long' if px > current_ema else 'short', px, '>' if px > current_ema else '<=', current_ema))
         return 1 if long > short else -1
 
     def _calc(self, cpx, last=0.0) -> float:

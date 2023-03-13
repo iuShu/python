@@ -21,7 +21,7 @@ class Strategy(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def finish_stop(self, fs=True):
+    def finish_stop(self):
         pass
 
     @abstractmethod
@@ -52,8 +52,8 @@ class DefaultStrategy(Strategy, metaclass=ABCMeta):
         self.finished_stop = False
         self.stopped = False
 
-    def finish_stop(self, fs=True):
-        self.finished_stop = fs
+    def finish_stop(self):
+        self.finished_stop = True
 
     def stop(self):
         self.stopped = True

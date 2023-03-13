@@ -52,7 +52,6 @@ async def daemon():
     while True:
         await asyncio.sleep(update_config_interval)
         await watch()
-        logging.debug('check %s' % trade('BTC')['strategy'])
         for k, v in trade().items():
             lsn = inst_listeners.get(k)
             if not lsn:
@@ -60,10 +59,7 @@ async def daemon():
 
             logging.debug('%s %s %s %s' % (v['stop'], lsn.inst(), lsn.is_stop(), lsn.is_finish_stop()))
             vs = v['stop']
-            if lsn.is_stop():
-                if vs == S_NORMAL:
-                    lsn.start()
-            else:
+            if not lsn.is_stop():
                 if vs == S_STOP:
                     lsn.stop()
                 elif vs == S_FINISH_STOP:
@@ -79,7 +75,6 @@ async def daemon():
         elif sys('stop') == S_FINISH_STOP:
             public.finish_stop()
             logging.warning("program state set to <finish_stop>")
-            break
 
 
 if __name__ == '__main__':

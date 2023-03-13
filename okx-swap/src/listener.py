@@ -44,15 +44,11 @@ class Listener(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def start(self):
-        pass
-
-    @abstractmethod
     def stop(self):
         pass
 
     @abstractmethod
-    def finish_stop(self, fs=True):
+    def finish_stop(self):
         pass
 
     @abstractmethod
@@ -89,6 +85,10 @@ class ZeroListener(Listener, metaclass=ABCMeta):
     def owner(self, client):
         self.client = client
 
+    def prepare(self):
+        self._stop = False
+        self._finish_stop = False
+
     def consumable(self, data: dict) -> bool:
         msg_id = data.get('id')
         if msg_id == self.msg_id:
@@ -109,17 +109,12 @@ class ZeroListener(Listener, metaclass=ABCMeta):
     def switch_strategy(self, strategy: str):
         pass
 
-    def start(self):
-        if self._stop and self._finish_stop:
-            self._finish_stop = False
-            self._stop = False
-
     def stop(self):
         self._stop = True
         self._finish_stop = True
 
-    def finish_stop(self, fs=True):
-        self._finish_stop = fs
+    def finish_stop(self):
+        self._finish_stop = True
 
     def is_stop(self):
         return self._stop
@@ -190,20 +185,15 @@ class InstListener(ZeroListener):
         self._switch = nxt, strategy
         nxt.prepare()
 
-    def start(self):
-        if self._stop and self._finish_stop:
-            self.prepare()
-            self._trading.prepare()
-
     def stop(self):
         self._stop = True
         self._finish_stop = True
         self._trading.stop()
         self._indicator.stop()
 
-    def finish_stop(self, fs=True):
-        self._finish_stop = fs
-        self._trading.finish_stop(fs)
+    def finish_stop(self):
+        self._finish_stop = True
+        self._trading.finish_stop()
 
     def is_stop(self):
         return self._stop
