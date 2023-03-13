@@ -29,6 +29,9 @@ class Notifier:
     def trade_stop(self, text: str):
         pass
 
+    def order_fail(self, text: str):
+        pass
+
     def undercost(self, balance: float, cost: float, inst_id: str):
         pass
 
@@ -72,6 +75,10 @@ class DingtalkNotifier(Notifier):
         msg = f'**Trade Stop**\n----\n{text}\n\n----\n{self.ts2format()}'
         self._send('Trade Stop', msg)
 
+    def order_fail(self, text: str):
+        msg = f'**Order Fail**\n----\n{text}\n\n----\n{self.ts2format()}'
+        self._send('Order Fail', msg)
+
     def undercost(self, balance: float, cost: float, inst_id: str):
         msg = f'**Undercost**\n----\n\nnot enough cost for trading\n{inst_id}\nbln={balance}, cost={cost}\n\n----\n{self.ts2format()}'
         self._send('Undercost', msg)
@@ -113,7 +120,7 @@ class DingtalkNotifier(Notifier):
         return True
 
     async def _async_send(self, packet: dict):
-        ts = time.time() * 1000
+        ts = int(time.time() * 1000)
         sign = self.signature(f'{ts}\n{self._secret}', self._secret)
         url = f'{self._webhook}&timestamp={ts}&sign={sign}'
         async with aiohttp.ClientSession() as session:
@@ -181,6 +188,10 @@ class NotifierContext(Notifier):
     def trade_stop(self, text: str):
         for n in self._notifiers:
             n.trade_stop(text)
+
+    def order_fail(self, text: str):
+        for n in self._notifiers:
+            n.order_fail(text)
 
     def undercost(self, balance: float, cost: float, inst_id: str):
         for n in self._notifiers:

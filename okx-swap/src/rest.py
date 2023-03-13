@@ -13,6 +13,11 @@ action_balance = '/api/v5/account/balance'
 action_algo = '/api/v5/trade/order-algo'
 action_close = '/api/v5/trade/close-position'
 
+action_order_detail = '/api/v5/trade/order'
+action_place_order = '/api/v5/trade/order'
+action_place_orders = '/api/v5/trade/batch-orders'
+action_cancel_order = '/api/v5/trade/cancel-order'
+
 
 class RestApi:
 
@@ -30,7 +35,10 @@ class RestApi:
 
         try:
             raw = resp.json()
-            return raw['data'] if str(raw.get('code')) == '0' else {}
+            if raw.get('code') == '0':
+                return raw['data']
+            logging.error('http get error %s' % raw)
+            return {}
         except Exception:
             logging.error('http get invalid response content', exc_info=True)
 
@@ -44,7 +52,10 @@ class RestApi:
 
         try:
             raw = resp.json()
-            return raw['data'] if str(raw.get('code')) == '0' else {}
+            if raw.get('code') == '0':
+                return raw['data']
+            logging.error('http get error %s' % raw)
+            return {}
         except Exception:
             logging.error('http post invalid response content', exc_info=True)
 
@@ -58,12 +69,81 @@ class RestApi:
             params['limit'] = limit
         return self._get(action_candles, params)
 
-    def place_algo(self, inst: str, inst_id: str, total_sz: float, pos_side: str, tp: float, sl: float) -> dict:
+    def place_order(self, inst_id: str, td_mode: str, ord_type: str, side: str, sz, pos_side: str, px=.0) -> dict:
+        params = {
+            'instId': inst_id,
+            'tdMode': td_mode,
+            'ordType': ord_type,
+            'side': side,
+            'sz': str(sz)
+        }
+        if pos_side:
+            params['posSide'] = pos_side
+        if px:
+            params['px'] = str(px)
+        data = self._post(action_place_order, params)
+        if data:
+            if data[0]['sCode'] == '0' and len(data[0]['ordId']) > 0:
+                return data[0]
+
+        logging.error('place order error %s' % data)
+        return {}
+
+    def place_orders(self, inst_id: str, td_mode: str, ord_type: str, side: str, pos_side: str, sz: list, px=None) -> dict:
+        body = []
+        for i in range(0, len(sz)):
+            params = {
+                'instId': inst_id,
+                'tdMode': td_mode,
+                'ordType': ord_type,
+                'side': side,
+                'sz': str(sz[i])
+            }
+            if pos_side:
+                params['posSide'] = pos_side
+            if px:
+                params['px'] = str(px[i])
+            body.append(params)
+        data = self._post(action_place_orders, body)
+        if data:
+            for each in data:
+                if each['sCode'] != '0':
+                    return {}
+            return data
+
+        logging.error('place batch order error')
+        return {}
+
+    def order_detail(self, inst_id: str, ord_id: str) -> dict:
+        params = {
+            'instId': inst_id,
+            'ordId': ord_id
+        }
+        data = self._get(action_order_detail, params)
+        if data:
+            return data[0]
+
+        logging.error('get order detail error')
+        return {}
+
+    def cancel_order(self, inst_id: str, ord_id: str) -> bool:
+        params = {
+            'instId': inst_id,
+            'ordId': ord_id
+        }
+        data = self._post(action_cancel_order, params)
+        if data and data[0]['sCode'] == '0':
+            return True
+
+        logging.error('cancel order error')
+        return False
+
+    def place_algo(self, inst: str, inst_id: str, total_sz: float, side: str, pos_side: str, tp: float, sl: float) -> dict:
         params = {
             'instId': inst_id,
             'tdMode': trade(inst)['td_mode'],
             'posSide': pos_side,
-            'side': 'buy' if pos_side == 'long' else 'sell',
+            'side': side,
             'ordType': 'oco',
             'sz': total_sz,
             'tpTriggerPxType': 'last',
@@ -74,27 +154,29 @@ class RestApi:
             'slOrdPx': '-1'
         }
         data = self._post(action_algo, params)
-        if data:
-            if data[0]['sCode'] == '0' and len(data[0]['algoId']) > 0:
-                return data[0]
+        if data and data[0]['sCode'] == '0':
+            return data[0]
 
-        logging.error('place algo error %s' % data)
+        logging.error('place algo error')
         return {}
 
     def cancel_algo(self, inst_id: str, algo_id: str) -> bool:
         params = {'instId': inst_id, 'algoId': algo_id}
         data = self._post(action_algo, [params])
-        if data:
-            if data[0]['sCode'] == '0' and data[0]['algoId'] == algo_id:
-                return True
+        if data and data[0]['sCode'] == '0':
+            return True
 
-        logging.error('cancel algo error %s' % data)
+        logging.error('cancel algo error')
         return False
 
-    def close_position(self, inst_id: str, td_mode: str, pos_side: str):
-        params = {'instId': inst_id, 'mgnMode': td_mode, 'posSide': pos_side}
+    def close_position(self, inst_id: str, td_mode: str, pos_side: str, auto_cancel=True) -> bool:
+        params = {'instId': inst_id, 'mgnMode': td_mode, 'posSide': pos_side, 'autoCxl': auto_cancel}
         data = self._post(action_close, params)
-        return data[0]['instId'] == inst_id and data[0]['posSide'] == pos_side
+        if data:
+            return data[0]['instId'] == inst_id and data[0]['posSide'] == pos_side
+
+        logging.error('close position error')
+        return False
 
     def get_balance(self, currency: str) -> float:
         params = {'ccy': currency}

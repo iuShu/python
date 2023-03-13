@@ -169,7 +169,7 @@ class InstListener(ZeroListener):
                 self._strategy = self._switch[1]
                 self._switch = None
 
-        if self._trading:
+        if not self._trading.is_stop():
             await self._trading.handle(data)
 
     def switch_strategy(self, strategy: str):
