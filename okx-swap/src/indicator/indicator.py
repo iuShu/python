@@ -58,8 +58,8 @@ class EmaIndicator(ZeroListener, Indicator):
         for cpx in cache:
             self._ema = self._calc(cpx[0], self._ema)
             self._history.insert(0, [cpx[0], self._ema, cpx[1]])
+            logging.info('%s %s cpx=%s ema%d=%s' % (self.inst(), self.ts2format(cpx[1]), cpx[0], self._ema_period, self._ema))
         self._ts = cache[-1][1]
-        logging.info('%s %s ema is %s' % (self.inst(), self.ts2format(self._ts), self._ema))
 
         self.register_on_exit()
         super().prepare()
@@ -91,6 +91,8 @@ class EmaIndicator(ZeroListener, Indicator):
         decide = trade(self._inst)['indicator']['trend_candles']
         if len(self._history) < decide:
             return 0
+        if len(self._history) > (decide * 2):
+            self._history = self._history[:(decide * 2)]
 
         long, short = 0, 0
         for h in self._history[:decide]:
