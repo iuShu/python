@@ -140,6 +140,7 @@ class Trailing(DefaultStrategy):
         if pnl > 0:
             self._consecutive_fails = 0
         elif pnl <= 0:
+            trade(self.inst())['pos_side'] = 'long' if self._pos_side == 'short' else 'short'
             self._consecutive_fails += 1
             conf = trade(self.inst())
             if self._consecutive_fails >= conf['trailing']['cooldown_fails']:
@@ -218,5 +219,4 @@ def calc_rate(from_px: float, to_px: float) -> float:
 
 
 if __name__ == '__main__':
-    sub()
     pass
