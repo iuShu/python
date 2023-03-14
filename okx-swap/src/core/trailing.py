@@ -112,21 +112,13 @@ class Trailing(DefaultStrategy):
 
         # all try size orders have been filled
 
-        sl_px = stop_loss(self.inst(), fpx, self._pos_side)
-        if not is_profit(self._pos_side, sl_px, px):
-            logging.info('%s close order by stop loss' % self.inst())
-            if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
-                self._order_close()
-                self._cancel_pending()
-            else:
-                logging.error('stop trading due to order closing error')
-                notifier.order_fail('stop trading due to order closing error')
-                self.stop()
-            return
+        sl_px, rate = stop_loss(self.inst(), fpx, self._pos_side), abs(div(sub(self._max_profit_px, px), self._max_profit_px))
+        in_sl, in_range = is_profit(self._pos_side, sl_px, px), rate < conf['trailing']['range']
+        if not in_sl or not in_range:
+            text = ('%s close order by stop loss' % self.inst()) if not in_sl \
+                else ('%s close order by trailing range %s %s' % (self.inst(), round(rate, 6), px))
+            logging.info(text)
 
-        rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
-        if rate >= conf['trailing']['range']:
-            logging.info('%s close order by trailing range %s %s' % (self.inst(), round(rate, 6), px))
             if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
                 self._order_close()
                 self._cancel_pending()
@@ -152,7 +144,7 @@ class Trailing(DefaultStrategy):
 
         rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
         if rate >= conf['trailing']['range']:
-            logging.info('%s take profit by trailing range %s' % (self.inst(), round(rate, 6)))
+            logging.info('%s take profit by trailing range %s at %s' % (self.inst(), round(rate, 6), px))
             if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
                 self._order_close()
                 self._cancel_pending()
@@ -167,7 +159,7 @@ class Trailing(DefaultStrategy):
             order = api.order_detail(inst_id, ord_id)
             if order['state'] == 'filled':
                 logging.info('%s' % order)
-                self._order_fill(order['avgPx'], order['fillSz'])
+                self._order_fill(order['avgPx'], order['sz'])
                 return True
             loop -= 1
             await asyncio.sleep(CONFIRM_INTERVAL / 1000)
@@ -185,7 +177,7 @@ class Trailing(DefaultStrategy):
         if order['state'] == 'filled':
             self._pending.pop(0)
             logging.info('%s' % order)
-            self._order_fill(order['avgPx'], order['fillSz'])
+            self._order_fill(order['fillPx'], order['sz'])
 
     def _cancel_pending(self):
         if not self._pending:
@@ -214,20 +206,24 @@ class Trailing(DefaultStrategy):
         self._max_profit_px = float(px)
 
     def _order_close(self):
-        conf = trade(self.inst())
-        closed, side = api.last_filled_order(), 'buy' if self._pos_side == 'short' else 'sell'
-        if not closed or closed['state'] != 'filled' or closed['side'] != side:
-            logging.error('%s' % closed)
-            logging.error('stop trading due to getting filled order error')
-            notifier.order_fail('stop trading due to getting filled order error')
+        conf, side = trade(self.inst()), 'buy' if self._pos_side == 'short' else 'sell'
+        loop, px, ttl_sz, pnl = MAX_CONFIRM, .0, .0, .0
+        while loop:
+            closed = api.last_filled_order(conf['inst_id'], conf['inst_type'])
+            if closed and closed['state'] == 'filled' and closed['side'] == side:
+                logging.info('%s' % closed)
+                px, ttl_sz, pnl = float(closed['avgPx']), float(closed['sz']), float(closed['pnl'])
+                break
+            loop -= 1
+
+        if not loop:
+            logging.error('stop trading due to getting closed order error')
+            notifier.order_fail('stop trading due to getting closed order error')
             self.stop()
             return
 
-        logging.info('%s' % closed)
-        # avg_px, ttl_sz = self._avg_px(), self._filled_sz()
-        px, avg_px, ttl_sz = float(closed['fillPx']), float(closed['avgPx']), float(closed['fillSz'])
-        ttl_size = mlt(self.face_value(), ttl_sz)
-        pnl = calc_pnl(avg_px, px, ttl_size, self._pos_side)
+        avg_px, ttl_size = mlt(self.face_value(), ttl_sz), self._avg_px()
+        # pnl = calc_pnl(avg_px, px, ttl_size, self._pos_side)
         ap_rate, mp_rate = calc_rate(avg_px, px), calc_rate(self._max_profit_px, avg_px)
         logging.info('%s %d close at %s %s %dx %s pnl=%s avg=%s(%s) max=%s(%s)'
                      % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))

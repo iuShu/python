@@ -3,6 +3,7 @@ import json
 import logging
 import aiohttp
 from aiohttp.http_websocket import WSMsgType
+from asyncio.exceptions import CancelledError, TimeoutError
 from listener import Listener
 from src.config import sys, trade
 from src.notifier import notifier
@@ -31,47 +32,50 @@ class _OkxWsClient:
         interrupted, reconnect_time, self._running = False, 1, True
         while self._running:
             async with session.ws_connect(url=self._url, timeout=self._read_timeout, heartbeat=self._heartbeat_interval, autoping=True, verify_ssl=False) as ws:
-                logging.info(f'client connected to {self._url}')
-                self.ws = ws
-                if reconnect_time > 1:
-                    await self.on_reconnect()
-                await self.after_connected()
-                interrupted, self._available = False, True
+                try:
+                    logging.info(f'client connected to {self._url}')
+                    self.ws = ws
+                    if reconnect_time > 1:
+                        await self.on_reconnect()
+                    await self.after_connected()
+                    interrupted, self._available = False, True
 
-                while self._running:
-                    msg = await ws.receive(timeout=self._read_timeout)
-                    if msg.type in MSG_CLOSE_TYPES:
-                        logging.warning(f'recv close msg, {msg}')
-                        interrupted, self._available = True, False
-                        break
-                    elif msg.type != WSMsgType.TEXT:
-                        logging.warning(f'unknown msg {msg}')
-                    else:
-                        try:
+                    while self._running:
+                        msg = await ws.receive(timeout=self._read_timeout)
+                        if msg.type in MSG_CLOSE_TYPES:
+                            logging.warning(f'recv close msg, {msg}')
+                            interrupted, self._available = True, False
+                            break
+                        elif msg.type != WSMsgType.TEXT:
+                            logging.warning(f'unknown msg {msg}')
+                        else:
                             await self.dispatch(json.loads(msg.data))
-                        except Exception:
-                            logging.error('dispatch message error', exc_info=True)
-                            self.stop()
 
-                    stop = 0
-                    for lsn in self.listeners:
-                        if lsn.is_stop():
-                            stop += 1
-                        elif self._finish_stop:
-                            lsn.finish_stop()
-                    # logging.debug('sys %s %s' % (stop, len(self.listeners)))
-                    if stop == len(self.listeners):
-                        self.stop()
+                        stop = 0
+                        for lsn in self.listeners:
+                            if lsn.is_stop():
+                                stop += 1
+                            elif self._finish_stop:
+                                lsn.finish_stop()
+                        # logging.debug('sys %s %s' % (stop, len(self.listeners)))
+                        if stop == len(self.listeners):
+                            self.stop()
+                except (CancelledError, TimeoutError) as e:
+                    logging.error('client interrupted due to %s' % type(e))
+                    interrupted, self._available = True, False
+                except Exception:
+                    logging.error('client eventloop unknown error, exit', exc_info=True)
+                    self.stop()
 
             if interrupted:
-                logging.warning(f'client interrupted, try {reconnect_time} reconnect')
+                logging.warning(f'client try {reconnect_time} reconnect')
                 reconnect_time += 1
                 await self.on_interrupted()
             else:
                 await ws.close()
                 await session.close()
                 logging.info('client shutdown')
-                break
+                raise SystemExit(1)
 
     async def after_connected(self):
         pass

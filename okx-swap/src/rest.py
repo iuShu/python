@@ -265,7 +265,7 @@ class RestApi:
         return header
 
 
-api = RestApi()
+api: RestApi = RestApi()
 
 
 if __name__ == '__main__':
