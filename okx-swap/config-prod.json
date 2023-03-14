@@ -1,0 +1,123 @@
+{
+  "sys": {
+    "env": "prod",
+    "api_url": "https://aws.okx.com",
+    "ws_public_url": "wss://wsaws.okx.com:8443/ws/v5/public",
+    "ws_private_url": "wss://wsaws.okx.com:8443/ws/v5/private",
+    "apikey": "",
+    "secret": "",
+    "passphrase": "",
+    "heartbeat_interval": 10,
+    "read_timeout": 10,
+    "max_reconnect": 20,
+    "strategies": ["martin", "trailing"],
+    "stop": 0
+  },
+  "log": {
+    "level": "INFO",
+    "format": "%(asctime)s %(levelname)s %(filename)s#%(funcName)s: %(message)s",
+    "filename": "/opt/trading/okx-swap/okx-swap.log"
+  },
+  "notifier": {
+    "mute_all": true,
+    "available": ["dingtalk"],
+    "windows": {
+
+    },
+    "dingtalk": {
+      "webhook": "",
+      "secret": "",
+      "rate_limited": 20,
+      "limited_duration": 60
+    },
+    "wechat": {
+
+    },
+    "telegram": {
+
+    }
+  },
+  "trade": {
+    "BTC": {
+      "inst_id": "BTC-USDT-SWAP",
+      "inst_type": "SWAP",
+      "td_mode": "isolated",
+      "currency": "USDT",
+      "face_value": 0.01,
+      "pos_side": "",
+      "stop": -1,
+      "indicator": {
+        "period": "15m",
+        "ema_period": 12,
+        "trend_candles": 2
+      },
+      "strategy": "trailing",
+      "martin": {
+        "lever": 60,
+        "first_size": 1,
+        "increment": 2,
+        "max_orders": 6,
+        "extra_margin": 0,
+        "follow_rates": [0.006, 0.012, 0.018, 0.024, 0.030, 0.032],
+        "profit_rates": [0.006, 0.006, 0.006, 0.006, 0.006, 0.003]
+      },
+      "trailing": {
+        "lever": 100,
+        "try_sizes": [1, 1],
+        "range": 0.002,
+        "cooldown_fails": 3
+      }
+    },
+    "GMX": {
+      "inst_id": "GMX-USDT-SWAP",
+      "inst_type": "SWAP",
+      "td_mode": "isolated",
+      "currency": "USDT",
+      "face_value": 0.1,
+      "pos_side": "",
+      "stop": -1,
+      "indicator": {
+        "period": "15m",
+        "ema_period": 12,
+        "trend_candles": 2
+      },
+      "strategy": "martin",
+      "martin": {
+        "lever": 20,
+        "first_size": 10,
+        "increment": 2,
+        "max_orders": 6,
+        "extra_margin": 0,
+        "follow_rates": [0.02, 0.04, 0.06, 0.08, 0.10, 0.12],
+        "profit_rates": [0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+      },
+      "trailing": {
+        "lever": 100,
+        "try_sizes": [1, 1],
+        "range": 0.002,
+        "cooldown_fails": 3
+      }
+    },
+    "CFX": {
+      "inst_id": "CFX-USDT-SWAP",
+      "inst_type": "SWAP",
+      "td_mode": "isolated",
+      "currency": "USDT",
+      "face_value": 10,
+      "pos_side": "",
+      "stop": 0,
+      "indicator": {
+        "period": "15m",
+        "ema_period": 12,
+        "trend_candles": 2
+      },
+      "strategy": "trailing",
+      "trailing": {
+        "lever": 20,
+        "try_sizes": [1100, 1100],
+        "range": 0.004,
+        "cooldown_fails": 3
+      }
+    }
+  }
+}

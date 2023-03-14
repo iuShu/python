@@ -1,5 +1,6 @@
 import atexit
 import logging
+import signal
 import time
 from abc import ABCMeta, abstractmethod
 
@@ -116,6 +117,8 @@ class EmaIndicator(ZeroListener, Indicator):
             ema = self._history[11] if len(self._history) >= 12 else self._history[-1]
             save_ema(self.inst_id(), self.ts2format(ema[2]), ema[1])
         atexit.register(delegate)
+        signal.signal(signal.SIGTERM, delegate)
+        signal.signal(signal.SIGINT, delegate)
 
     @staticmethod
     def ts2format(ts: int) -> str:

@@ -51,6 +51,8 @@ class DingtalkNotifier(Notifier):
     _order = 0
     _drainer = None
 
+    _connector = aiohttp.TCPConnector(ssl=False)
+
     def ws_interrupt(self, text: str):
         msg = f'**Client Interrupt**\n----\n{text}\n\n----\n{self.ts2format()}'
         self._send('Client Interrupt', msg)
@@ -121,9 +123,9 @@ class DingtalkNotifier(Notifier):
 
     async def _async_send(self, packet: dict):
         ts = int(time.time() * 1000)
-        sign = self.signature(f'{ts}\n{self._secret}', self._secret)
+        sign = self.signature(f'{ts}\n{self._secret}', self._secret).decode(encoding='utf-8')
         url = f'{self._webhook}&timestamp={ts}&sign={sign}'
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=self._connector) as session:
             await session.post(url=url, data=packet)
 
     async def _drain_msg(self):

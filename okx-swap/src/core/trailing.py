@@ -25,12 +25,16 @@ class Trailing(DefaultStrategy):
         self._counter = 0
         self._max_profit_px = .0
 
+        self._pending = []
         self._consecutive_fails = 0
         self._cooldown = 0
+
+        self._lever = {}
 
     async def handle(self, data):
         # logging.debug("trailing %s %s %s" % (self.finished_stop, self.stopped, data))
         if self._trading:
+            self._confirm_follow_filled()
             self._mock_algo(data['data'][0])
             self._take_profit(data['data'][0])
         elif ms_time() >= self._cooldown:
@@ -45,10 +49,23 @@ class Trailing(DefaultStrategy):
                 return
             pos_side = 'long' if t > 0 else 'short'
 
+        # check lever
+        if self._lever[pos_side] != self.lever():
+            if api.set_lever(conf['inst_id'], self.lever(), conf['td_mode'], pos_side):
+                logging.info('%s set %s lever to %d' % (conf['inst_id'], pos_side, self.lever()))
+                self._lever[pos_side] = self.lever()
+            else:
+                logging.error('stop trading due to lever setting error')
+                notifier.order_fail('stop trading due to lever setting error')
+                self.stop()
+                return
+
+        # cost and balance
+
         self._pos_side, px, sz = pos_side, float(data['last']), conf['trailing']['try_sizes'][0]
         side = 'buy' if pos_side == 'long' else 'sell'
         conf = trade(self.inst())
-        data = api.place_order(conf['inst_id'], conf['td_mode'], 'market', side, sz, pos_side)
+        data = api.place_order(conf['inst_id'], conf['td_mode'], 'market', side, pos_side, sz)
         if not data:
             self._cooldown = ms_time() + PLACE_RETRY_INTERVAL
             return
@@ -66,21 +83,19 @@ class Trailing(DefaultStrategy):
     def _follow_order(self):
         conf = trade(self.inst())
         sizes, rng, idx = conf['trailing']['try_sizes'], conf['trailing']['range'], self._idx
-        fpx, side, ords = self._orders[0][0], 'buy' if self._pos_side == 'long' else 'sell', []
+        fpx, side = self._orders[0][0], 'buy' if self._pos_side == 'long' else 'sell'
         while idx < len(sizes):
             next_px = next_price(self.inst(), idx, fpx, self._pos_side)
             data = api.place_order(conf['inst_id'], conf['td_mode'], 'limit', side, self._pos_side, sizes[idx], next_px)
             if data:
                 size = mlt(self.face_value(), sizes[idx])
                 logging.info('%s placed order at %s %s %dx %s' % (self.inst(), next_px, size, self.lever(), self._pos_side))
-                ords.append(data['ordId'])
+                self._pending.append(data['ordId'])
                 idx += 1
             else:
-                notifier.order_fail('%s placing follow order failed' % conf['inst_id'])
                 logging.warning('stop trading due to follow order placing failed')
+                notifier.order_fail('%s placing follow order failed' % conf['inst_id'])
                 self.stop()
-                return
-        asyncio.create_task(self._confirm_follow_filled(conf['inst_id'], ords))
 
     def _mock_algo(self, data: dict):
         px = float(data['last'])
@@ -93,27 +108,33 @@ class Trailing(DefaultStrategy):
 
         conf = trade(self.inst())
         sizes, fpx = conf['trailing']['try_sizes'], self._orders[0][0]
-        if self._idx == len(sizes):     # all try_size orders have been filled
-            sl_px = stop_loss(self.inst(), fpx, self._pos_side)
-            if not is_profit(self._pos_side, sl_px, px):
-                logging.info('%s close order by stop loss' % self.inst())
-                if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
-                    self._order_close(px)
-                else:
-                    logging.error('stop trading due to order closing error')
-                    notifier.order_fail('stop trading due to order closing error')
-                    self.stop()
-                return
+        if self._idx != len(sizes):
+            return
 
-            rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
-            if rate >= conf['trailing']['range']:
-                logging.info('%s close order by trailing range %s %s' % (self.inst(), round(rate, 6), px))
-                if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
-                    self._order_close(px)
-                else:
-                    logging.error('stop trading due to order closing error')
-                    notifier.order_fail('stop trading due to order closing error')
-                    self.stop()
+        # all try size orders have been filled
+
+        sl_px = stop_loss(self.inst(), fpx, self._pos_side)
+        if not is_profit(self._pos_side, sl_px, px):
+            logging.info('%s close order by stop loss' % self.inst())
+            if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
+                self._order_close()
+                self._cancel_pending()
+            else:
+                logging.error('stop trading due to order closing error')
+                notifier.order_fail('stop trading due to order closing error')
+                self.stop()
+            return
+
+        rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
+        if rate >= conf['trailing']['range']:
+            logging.info('%s close order by trailing range %s %s' % (self.inst(), round(rate, 6), px))
+            if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
+                self._order_close()
+                self._cancel_pending()
+            else:
+                logging.error('stop trading due to order closing error')
+                notifier.order_fail('stop trading due to order closing error')
+                self.stop()
 
     def _take_profit(self, data: dict):
         if not self._trading:
@@ -134,7 +155,8 @@ class Trailing(DefaultStrategy):
         if rate >= conf['trailing']['range']:
             logging.info('%s take profit by trailing range %s' % (self.inst(), round(rate, 6)))
             if api.close_position(conf['inst_id'], conf['td_mode'], self._pos_side):
-                self._order_close(px)
+                self._order_close()
+                self._cancel_pending()
             else:
                 logging.error('stop trading due to order closing error')
                 notifier.order_fail('stop trading due to order closing error')
@@ -155,15 +177,30 @@ class Trailing(DefaultStrategy):
         notifier.order_fail('%s %s order have not been filled for a long time' % (inst_id, ord_id))
         return False
 
-    async def _confirm_follow_filled(self, inst_id: str, ord_id: list):
-        idx, counter = 0, self._counter
-        while idx != len(ord_id) and counter == self._counter:
-            order = api.order_detail(inst_id, ord_id[idx])
-            if order['state'] == 'filled':
-                logging.info('%s' % order)
-                self._order_fill(order['avgPx'], order['fillSz'])
-                idx += 1
-            await asyncio.sleep(FOLLOW_CONFIRM_INTERVAL / 1000)
+    def _confirm_follow_filled(self):
+        if not self._pending:
+            return
+
+        counter, inst_id = self._counter, trade(self.inst())['inst_id']
+        order = api.order_detail(inst_id, self._pending[0])
+        if order['state'] == 'filled':
+            self._pending.pop(0)
+            logging.info('%s' % order)
+            self._order_fill(order['avgPx'], order['fillSz'])
+
+    def _cancel_pending(self):
+        if not self._pending:
+            logging.info('no pending orders needs to cancel')
+            return
+
+        if api.cancel_orders(trade(self.inst())['inst_id'], self._pending):
+            logging.info('cancel %d pending orders ok' % len(self._pending))
+            self._pending.clear()
+            return
+
+        logging.error('stop trading due to order canceling error')
+        notifier.order_fail('stop trading due to order canceling error')
+        self.stop()
 
     def _order_fill(self, px, sz):
         fpx = float(px) if not self._orders else self._orders[0][0]
@@ -177,8 +214,19 @@ class Trailing(DefaultStrategy):
         self._orders.append([float(px), float(sz)])
         self._max_profit_px = px
 
-    def _order_close(self, px: float):
-        avg_px, ttl_sz = self._avg_px(), self._filled_sz()
+    def _order_close(self):
+        conf = trade(self.inst())
+        closed, side = api.last_filled_order(), 'buy' if self._pos_side == 'short' else 'sell'
+        if not closed or closed['state'] != 'filled' or closed['side'] != side:
+            logging.error('%s' % closed)
+            logging.error('stop trading due to getting filled order error')
+            notifier.order_fail('stop trading due to getting filled order error')
+            self.stop()
+            return
+
+        logging.info('%s' % closed)
+        # avg_px, ttl_sz = self._avg_px(), self._filled_sz()
+        px, avg_px, ttl_sz = float(closed['fillPx']), float(closed['avgPx']), float(closed['fillSz'])
         ttl_size = mlt(self.face_value(), ttl_sz)
         pnl = calc_pnl(avg_px, px, ttl_size, self._pos_side)
         ap_rate, mp_rate = calc_rate(avg_px, px), calc_rate(self._max_profit_px, avg_px)
@@ -190,9 +238,8 @@ class Trailing(DefaultStrategy):
         if pnl > 0:
             self._consecutive_fails = 0
         elif pnl <= 0:
-            trade(self.inst())['pos_side'] = 'long' if self._pos_side == 'short' else 'short'
+            conf['pos_side'] = 'long' if self._pos_side == 'short' else 'short'
             self._consecutive_fails += 1
-            conf = trade(self.inst())
             if self._consecutive_fails >= conf['trailing']['cooldown_fails']:
                 logging.info('%s %s cooling down' % (self.inst(), 'tailing'))
                 self._cooldown = ms_time() + (period2ms[conf['indicator']['period']] * 1000)

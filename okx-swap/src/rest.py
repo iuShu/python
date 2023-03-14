@@ -8,15 +8,18 @@ import requests
 
 from src.config import sys, trade
 
+action_set_lever = '/api/v5/account/set-leverage'
 action_candles = '/api/v5/market/candles'
 action_balance = '/api/v5/account/balance'
 action_algo = '/api/v5/trade/order-algo'
 action_close = '/api/v5/trade/close-position'
 
-action_order_detail = '/api/v5/trade/order'
 action_place_order = '/api/v5/trade/order'
 action_place_orders = '/api/v5/trade/batch-orders'
+action_order_detail = '/api/v5/trade/order'
+action_order_history = '/api/v5/trade/orders-history'
 action_cancel_order = '/api/v5/trade/cancel-order'
+action_cancel_orders = '/api/v5/trade/cancel-batch-orders'
 
 
 class RestApi:
@@ -54,7 +57,7 @@ class RestApi:
             raw = resp.json()
             if raw.get('code') == '0':
                 return raw['data']
-            logging.error('http get error %s' % raw)
+            logging.error('http post error %s' % raw)
             return {}
         except Exception:
             logging.error('http post invalid response content', exc_info=True)
@@ -69,7 +72,7 @@ class RestApi:
             params['limit'] = limit
         return self._get(action_candles, params)
 
-    def place_order(self, inst_id: str, td_mode: str, ord_type: str, side: str, sz, pos_side: str, px=.0) -> dict:
+    def place_order(self, inst_id: str, td_mode: str, ord_type: str, side: str, pos_side: str, sz, px=.0) -> dict:
         params = {
             'instId': inst_id,
             'tdMode': td_mode,
@@ -111,7 +114,7 @@ class RestApi:
                     return {}
             return data
 
-        logging.error('place batch order error')
+        logging.error('place batch orders error')
         return {}
 
     def order_detail(self, inst_id: str, ord_id: str) -> dict:
@@ -126,6 +129,20 @@ class RestApi:
         logging.error('get order detail error')
         return {}
 
+    def last_filled_order(self, inst_id: str, inst_type: str) -> dict:
+        params = {
+            'instId': inst_id,
+            'instType': inst_type,
+            'state': 'filled',
+            'limit': 1
+        }
+        data = self._get(action_order_history, params)
+        if data:
+            return data[0]
+
+        logging.error('get order history error')
+        return {}
+
     def cancel_order(self, inst_id: str, ord_id: str) -> bool:
         params = {
             'instId': inst_id,
@@ -136,6 +153,18 @@ class RestApi:
             return True
 
         logging.error('cancel order error')
+        return False
+
+    def cancel_orders(self, inst_id: str, ord_id: list) -> bool:
+        body = [{'instId': inst_id, 'ordId': o} for o in ord_id]
+        data = self._post(action_cancel_orders, body)
+        if data:
+            for each in data:
+                if each['sCode'] != '0':
+                    return False
+            return True
+
+        logging.error('cancel batch orders error')
         return False
 
     def place_algo(self, inst: str, inst_id: str, total_sz: float, side: str, pos_side: str, tp: float, sl: float) -> dict:
@@ -176,6 +205,20 @@ class RestApi:
             return data[0]['instId'] == inst_id and data[0]['posSide'] == pos_side
 
         logging.error('close position error')
+        return False
+
+    def set_lever(self, inst_id: str, lever: int, mgn_mode: str, pos_side: str) -> bool:
+        params = {
+            'instId': inst_id,
+            'lever': str(lever),
+            'mgnMode': mgn_mode,
+            'posSide': pos_side
+        }
+        data = self._post(action_set_lever, params)
+        if data and data[0]['lever'] == str(lever):
+            return True
+
+        logging.error('%s set lever error' % inst_id)
         return False
 
     def get_balance(self, currency: str) -> float:

@@ -21,7 +21,7 @@ def analysis():
                 batch = {}
     # pprint.pprint(repo)
 
-    stat = [.0, 0, 0, 0, .0, .0, 0, 0, .0]
+    stat = [.0, 0, 0, 0, .0, .0, 0, 0, .0, .0]
     for k, batches in repo.items():
         for batch in batches:
             desc = [str(batch['idx']), batch['pos_side'], str(time_diff(batch['st'], batch['et'])), str(batch['pnl'])]
@@ -53,6 +53,8 @@ def analysis():
 
             if float(desc[2]) > stat[8]:
                 stat[8] = float(desc[2])
+            if not stat[9] or float(desc[2]) < stat[9]:
+                stat[9] = float(desc[2])
 
     print('ttl pnl is', stat[0])
     print('ttl ord is', stat[1])
@@ -64,6 +66,7 @@ def analysis():
     print('ttl long is', stat[6])
     print('ttl short is', stat[7])
     print('max dur is', stat[8], 'm')
+    print('min dur is', stat[9], 'm')
 
 
 def order_fill(line: str, batch: dict) -> dict:

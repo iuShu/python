@@ -1,8 +1,11 @@
 import logging
 from abc import ABCMeta, abstractmethod
+
+import src.core.martin
+import src.core.trailing
+import src.core.shadow.martin
+import src.core.shadow.trailing
 from src.config import sys, trade
-from src.core.shadow.martin import Martin
-from src.core.shadow.trailing import Trailing
 
 
 class Listener(metaclass=ABCMeta):
@@ -132,19 +135,10 @@ class InstListener(ZeroListener):
         self._trading = None
         self._switch = None
 
-        self._martin = None
-        self._trailing = None
-
         self._finish_stop = True
         self._stop = True
 
         self._indicator = indicator
-
-        for stg in sys('strategies'):
-            if stg == 'martin':
-                self._martin = Martin(inst, indicator)
-            elif stg == 'trailing':
-                self._trailing = Trailing(inst, indicator)
 
     def channel(self) -> str:
         return "tickers"
@@ -159,17 +153,15 @@ class InstListener(ZeroListener):
 
     async def consume(self, data: dict):
         if self._trading.is_stop():
-            if self._finish_stop:
-                self._stop = True
-                logging.info("%s stop at finish" % self.inst())
-                return
             if self._switch:
                 logging.info("switch strategy from %s to %s" % (self._strategy, self._switch[1]))
                 self._trading = self._switch[0]
                 self._strategy = self._switch[1]
                 self._switch = None
-
-        if not self._trading.is_stop():
+            else:
+                self._stop = True
+                logging.info("%s stop at finish" % self.inst())
+        else:
             await self._trading.handle(data)
 
     def switch_strategy(self, strategy: str):
@@ -203,7 +195,9 @@ class InstListener(ZeroListener):
 
     def _get(self, strategy: str):
         if strategy == 'martin':
-            return self._martin
+            return src.core.shadow.martin.Martin(self.inst(), self._indicator) if sys('env') == 'shadow' \
+                else src.core.martin.Martin(self.inst(), self._indicator)
         elif strategy == 'trailing':
-            return self._trailing
+            return src.core.shadow.trailing.Trailing(self.inst(), self._indicator) if sys('env') == 'shadow' \
+                else src.core.trailing.Trailing(self.inst(), self._indicator)
         return None

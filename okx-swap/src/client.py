@@ -49,16 +49,15 @@ class _OkxWsClient:
                     else:
                         await self.dispatch(json.loads(msg.data))
 
-                    if self._finish_stop:
-                        stop = 0
-                        for lsn in self.listeners:
-                            if lsn.is_stop():
-                                stop += 1
-                            else:
-                                lsn.finish_stop()
-                        logging.debug('sys %s %s' % (stop, len(self.listeners)))
-                        if stop == len(self.listeners):
-                            self.stop()
+                    stop = 0
+                    for lsn in self.listeners:
+                        if lsn.is_stop():
+                            stop += 1
+                        elif self._finish_stop:
+                            lsn.finish_stop()
+                    # logging.debug('sys %s %s' % (stop, len(self.listeners)))
+                    if stop == len(self.listeners):
+                        self.stop()
 
             if interrupted:
                 logging.warning(f'client interrupted, try {reconnect_time} reconnect')

@@ -3,8 +3,9 @@ import os
 import json
 import logging
 
-config_path = '../config.json'
-history_path = '../ema_history'
+env = 'test'
+config_path = f'../config-{env}.json'
+history_path = f'../ema-history-{env}'
 update_config_interval = 5.0
 cache = dict()
 history = dict()
