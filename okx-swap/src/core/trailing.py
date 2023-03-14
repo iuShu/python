@@ -29,7 +29,7 @@ class Trailing(DefaultStrategy):
         self._consecutive_fails = 0
         self._cooldown = 0
 
-        self._lever = {}
+        self._lever = {'long': 0, 'short': 0}
 
     async def handle(self, data):
         # logging.debug("trailing %s %s %s" % (self.finished_stop, self.stopped, data))
@@ -64,7 +64,6 @@ class Trailing(DefaultStrategy):
 
         self._pos_side, px, sz = pos_side, float(data['last']), conf['trailing']['try_sizes'][0]
         side = 'buy' if pos_side == 'long' else 'sell'
-        conf = trade(self.inst())
         data = api.place_order(conf['inst_id'], conf['td_mode'], 'market', side, pos_side, sz)
         if not data:
             self._cooldown = ms_time() + PLACE_RETRY_INTERVAL
@@ -140,7 +139,7 @@ class Trailing(DefaultStrategy):
         if not self._trading:
             return
 
-        conf = trade(self.inst())['trailing']
+        conf = trade(self.inst())
         sizes = conf['trailing']['try_sizes']
         if sizes == 1 or self._idx == len(sizes):
             return
@@ -212,7 +211,7 @@ class Trailing(DefaultStrategy):
         notifier.order_filled(f'{self.inst()} fill at {px} {size}\n{self.lever()} {self._pos_side}\nnext={nxt} sl={sl}')
         self._idx += 1
         self._orders.append([float(px), float(sz)])
-        self._max_profit_px = px
+        self._max_profit_px = float(px)
 
     def _order_close(self):
         conf = trade(self.inst())

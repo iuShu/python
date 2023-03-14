@@ -47,7 +47,11 @@ class _OkxWsClient:
                     elif msg.type != WSMsgType.TEXT:
                         logging.warning(f'unknown msg {msg}')
                     else:
-                        await self.dispatch(json.loads(msg.data))
+                        try:
+                            await self.dispatch(json.loads(msg.data))
+                        except Exception:
+                            logging.error('dispatch message error', exc_info=True)
+                            self.stop()
 
                     stop = 0
                     for lsn in self.listeners:

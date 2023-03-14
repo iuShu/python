@@ -51,8 +51,6 @@ class DingtalkNotifier(Notifier):
     _order = 0
     _drainer = None
 
-    _connector = aiohttp.TCPConnector(ssl=False)
-
     def ws_interrupt(self, text: str):
         msg = f'**Client Interrupt**\n----\n{text}\n\n----\n{self.ts2format()}'
         self._send('Client Interrupt', msg)
@@ -93,7 +91,6 @@ class DingtalkNotifier(Notifier):
         if ntf('mute_all'):
             return
 
-        logging.info('notify %s' % title)
         packet = {'msgtype': 'markdown', 'markdown': {'title': title, 'text': msg}}
         if not self._rate_limit(packet):
             self._order += 1
@@ -125,8 +122,10 @@ class DingtalkNotifier(Notifier):
         ts = int(time.time() * 1000)
         sign = self.signature(f'{ts}\n{self._secret}', self._secret).decode(encoding='utf-8')
         url = f'{self._webhook}&timestamp={ts}&sign={sign}'
-        async with aiohttp.ClientSession(connector=self._connector) as session:
-            await session.post(url=url, data=packet)
+        connector = aiohttp.TCPConnector(ssl=False)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            async with session.post(url=url, json=packet) as resp:
+                logging.info('notify %s %s %s' % (packet['markdown']['title'], resp.status, await resp.text(encoding='utf-8')))
 
     async def _drain_msg(self):
         while True:
