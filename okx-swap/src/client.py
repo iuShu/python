@@ -60,7 +60,7 @@ class _OkxWsClient:
                         # logging.debug('sys %s %s' % (stop, len(self.listeners)))
                         if stop == len(self.listeners):
                             self.stop()
-                except (CancelledError, TimeoutError) as e:
+                except TimeoutError as e:
                     logging.error('client interrupted due to %s' % type(e))
                     interrupted, self._available = True, False
                 except Exception:

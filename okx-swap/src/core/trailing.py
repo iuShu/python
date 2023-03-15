@@ -112,7 +112,8 @@ class Trailing(DefaultStrategy):
 
         # all try size orders have been filled
 
-        sl_px, rate = stop_loss(self.inst(), fpx, self._pos_side), abs(div(sub(self._max_profit_px, px), self._max_profit_px))
+        factor = len(sizes) - self._idx - 1
+        sl_px, rate = stop_loss(self.inst(), self._avg_px(), factor, self._pos_side), abs(div(sub(self._max_profit_px, px), self._max_profit_px))
         in_sl, in_range = is_profit(self._pos_side, sl_px, px), rate < conf['trailing']['range']
         if not in_sl or not in_range:
             text = ('%s close order by stop loss' % self.inst()) if not in_sl \
@@ -195,15 +196,15 @@ class Trailing(DefaultStrategy):
 
     def _order_fill(self, px, sz):
         fpx = float(px) if not self._orders else self._orders[0][0]
-        size = mlt(self.face_value(), float(sz))
-        nxt = next_price(self.inst(), self._idx + 1, fpx, self._pos_side)
-        sl = stop_loss(self.inst(), fpx, self._pos_side)
+        size, sizes = mlt(self.face_value(), float(sz)), trade(self.inst())['trailing']['try_sizes']
+        nxt = next_price(self.inst(), self._idx + 1, fpx, self._pos_side) if len(sizes) != self._idx else .0
+        sl = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx - 1, self._pos_side)
         logging.info('%s order filled at %s %s %dx %s next=%s sl=%s'
                      % (self.inst(), px, size, self.lever(), self._pos_side, nxt, sl))
         notifier.order_filled(f'{self.inst()} fill at {px} {size}\n{self.lever()} {self._pos_side}\nnext={nxt} sl={sl}')
         self._idx += 1
         self._orders.append([float(px), float(sz)])
-        self._max_profit_px = float(px)
+        self._max_profit_px = self._avg_px()
 
     def _order_close(self):
         conf, side = trade(self.inst()), 'buy' if self._pos_side == 'short' else 'sell'
@@ -276,10 +277,10 @@ class Trailing(DefaultStrategy):
         return trade(self.inst())['trailing']['lever']
 
 
-def stop_loss(inst: str, first_px: float, pos_side: str) -> float:
+def stop_loss(inst: str, avg_px: float, factor: int, pos_side: str) -> float:
     conf = trade(inst)['trailing']
-    sl_rate = mlt(conf['range'], len(conf['try_sizes']))
-    return mlt(first_px, add(1.0, sl_rate if pos_side == 'short' else -sl_rate))
+    sl_rate = mlt(conf['range'], factor)
+    return mlt(avg_px, add(1.0, sl_rate if pos_side == 'short' else -sl_rate))
 
 
 def next_price(inst: str, idx: int, first_px: float, pos_side: str) -> float:

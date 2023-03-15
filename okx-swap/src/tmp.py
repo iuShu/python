@@ -27,6 +27,8 @@ def analysis():
             desc = [str(batch['idx']), batch['pos_side'], str(time_diff(batch['st'], batch['et'])), str(batch['pnl'])]
             for order in batch['orders']:
                 desc.append(str(order['px']))
+            while len(desc) < 7:
+                desc.insert(-1, '')
             desc.append(str(calc_rate(batch['avg'], float(desc[-1]), batch['lever'])) + '%')
             if batch['pnl'] < 0:
                 desc.append('x')
@@ -74,7 +76,7 @@ def order_fill(line: str, batch: dict) -> dict:
     if len(arr) != 10:
         print('unexpected match line at', line)
         raise SystemExit(1)
-    order = _order(line[:line.find(',') + 4], float(arr[4]), float(arr[5]), float(arr[8].split('=')[1]), float(arr[9].split('=')[1]))
+    order = _order(line[:line.find(',') + 4], round(float(arr[4]), 6), float(arr[5]), float(arr[8].split('=')[1]), float(arr[9].split('=')[1]))
     if not batch:
         batch = _batch(arr[0], arr[7])
     batch['ttl_sz'] = add(batch['ttl_sz'], order['sz'])
@@ -87,7 +89,7 @@ def order_close(line: str, batch: dict):
     if len(arr) != 11:
         print('unexpected match line at', line)
         raise SystemExit(1)
-    order = _order(line[:line.find(',') + 4], float(arr[4]), float(arr[5]))
+    order = _order(line[:line.find(',') + 4], round(float(arr[4]), 6), float(arr[5]))
     avg_px = arr[9].split('=')[1]
     batch['avg'] = float(avg_px[:avg_px.find('(')])
     max_px = arr[10].split('=')[1]

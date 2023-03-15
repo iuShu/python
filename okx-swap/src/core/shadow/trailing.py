@@ -80,7 +80,7 @@ class Trailing(DefaultStrategy):
                 return
 
         if self._idx == len(sizes):     # all try_size orders have been filled
-            sl_px = stop_loss(self.inst(), fpx, self._pos_side)
+            sl_px = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx - 1, self._pos_side)
             if not is_profit(self._pos_side, sl_px, px):
                 logging.info('%s close order by stop loss' % self.inst())
                 self._order_close(px)
@@ -117,15 +117,15 @@ class Trailing(DefaultStrategy):
 
     def _order_fill(self, px, sz):
         fpx = px if not self._orders else self._orders[0][0]
-        size = mlt(self.face_value(), sz)
+        size, sizes = mlt(self.face_value(), sz), trade(self.inst())['trailing']['try_sizes']
         nxt = next_price(self.inst(), self._idx + 1, fpx, self._pos_side)
-        sl = stop_loss(self.inst(), fpx, self._pos_side)
+        sl = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx - 1, self._pos_side)
         logging.info('%s order filled at %s %s %dx %s next=%s sl=%s'
                      % (self.inst(), px, size, self.lever(), self._pos_side, nxt, sl))
         notifier.order_filled(f'{self.inst()} fill at {px} {size}\n{self.lever()} {self._pos_side}\nnext={nxt} sl={sl}')
         self._idx += 1
         self._orders.append([px, sz])
-        self._max_profit_px = px
+        self._max_profit_px = self._avg_px()
 
     def _order_close(self, px: float):
         avg_px, ttl_sz = self._avg_px(), self._filled_sz()
@@ -184,10 +184,10 @@ class Trailing(DefaultStrategy):
         return trade(self.inst())['trailing']['lever']
 
 
-def stop_loss(inst: str, first_px: float, pos_side: str) -> float:
+def stop_loss(inst: str, avg_px: float, factor: int, pos_side: str) -> float:
     conf = trade(inst)['trailing']
-    sl_rate = mlt(conf['range'], len(conf['try_sizes']))
-    return mlt(first_px, add(1.0, sl_rate if pos_side == 'short' else -sl_rate))
+    sl_rate = mlt(conf['range'], factor)
+    return mlt(avg_px, add(1.0, sl_rate if pos_side == 'short' else -sl_rate))
 
 
 def next_price(inst: str, idx: int, first_px: float, pos_side: str) -> float:
