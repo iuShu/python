@@ -160,6 +160,7 @@ class InstListener(ZeroListener):
                 self._switch = None
             else:
                 self._stop = True
+                self._indicator.stop()
                 logging.info("%s stop at finish" % self.inst())
         else:
             await self._trading.handle(data)
