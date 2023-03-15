@@ -80,7 +80,7 @@ class Trailing(DefaultStrategy):
                 return
 
         if self._idx == len(sizes):     # all try_size orders have been filled
-            sl_px = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx - 1, self._pos_side)
+            sl_px = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx + 1, self._pos_side)
             if not is_profit(self._pos_side, sl_px, px):
                 logging.info('%s close order by stop loss' % self.inst())
                 self._order_close(px)
@@ -88,7 +88,7 @@ class Trailing(DefaultStrategy):
 
             rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
             if rate >= conf['range']:
-                logging.info('%s close order by trailing range %s %s' % (self.inst(), round(rate, 6), px))
+                logging.info('%s close order by trailing range %g %g' % (self.inst(), rate, px))
                 self._order_close(px)
 
     def _take_profit(self, data: dict):
@@ -108,33 +108,36 @@ class Trailing(DefaultStrategy):
 
         rate = abs(div(sub(self._max_profit_px, px), self._max_profit_px))
         if rate >= conf['range']:
-            logging.info('%s take profit by trailing range %s' % (self.inst(), round(rate, 6)))
+            logging.info('%s take profit by trailing range %g %g' % (self.inst(), rate, px))
             self._order_close(px)
 
     def _order_place(self, px, sz):
         size = mlt(self.face_value(), sz)
-        logging.info('%s placed order at %s %s %dx %s' % (self.inst(), px, size, self.lever(), self._pos_side))
+        logging.info('%s placed order at %g %g %dx %s' % (self.inst(), px, size, self.lever(), self._pos_side))
 
     def _order_fill(self, px, sz):
         fpx = px if not self._orders else self._orders[0][0]
         size, sizes = mlt(self.face_value(), sz), trade(self.inst())['trailing']['try_sizes']
-        nxt = next_price(self.inst(), self._idx + 1, fpx, self._pos_side)
-        sl = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx - 1, self._pos_side)
-        logging.info('%s order filled at %s %s %dx %s next=%s sl=%s'
-                     % (self.inst(), px, size, self.lever(), self._pos_side, nxt, sl))
-        notifier.order_filled(f'{self.inst()} fill at {px} {size}\n{self.lever()} {self._pos_side}\nnext={nxt} sl={sl}')
+
         self._idx += 1
         self._orders.append([px, sz])
         self._max_profit_px = self._avg_px()
+
+        nxt = next_price(self.inst(), self._idx, fpx, self._pos_side)
+        sl = stop_loss(self.inst(), self._avg_px(), len(sizes) - self._idx + 1, self._pos_side)
+        logging.info('%s order filled at %g %g %dx %s next=%g sl=%g'
+                     % (self.inst(), px, size, self.lever(), self._pos_side, nxt, sl))
+        notifier.order_filled('%s fill at %g %g\n%d %s\nnext=%g sl=%g'
+                              % (self.inst(), px, size, self.lever(), self._pos_side, nxt, sl))
 
     def _order_close(self, px: float):
         avg_px, ttl_sz = self._avg_px(), self._filled_sz()
         ttl_size = mlt(self.face_value(), ttl_sz)
         pnl = calc_pnl(avg_px, px, ttl_size, self._pos_side)
         ap_rate, mp_rate = calc_rate(avg_px, px), calc_rate(self._max_profit_px, avg_px)
-        logging.info('%s %d close at %s %s %dx %s pnl=%s avg=%s(%s) max=%s(%s)'
+        logging.info('%s %d close at %g %g %dx %s pnl=%g avg=%g(%g) max=%g(%g)'
                      % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))
-        notifier.order_closed('%s %d close at %s %s\n %dx %s pnl=%s\navg=%s(%s) max=%s(%s)'
+        notifier.order_closed('%s %d close at %g %g\n %dx %s pnl=%g\navg=%g(%g) max=%g(%g)'
                               % (self.inst(), self._counter, px, ttl_size, self.lever(), self._pos_side, pnl, avg_px, ap_rate, self._max_profit_px, mp_rate))
 
         if pnl > 0:
