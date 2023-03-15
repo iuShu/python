@@ -114,7 +114,7 @@
       "strategy": "trailing",
       "trailing": {
         "lever": 20,
-        "try_sizes": [1100, 1100],
+        "try_sizes": [800, 800],
         "range": 0.004,
         "cooldown_fails": 3
       }

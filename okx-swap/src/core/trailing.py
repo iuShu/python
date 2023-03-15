@@ -222,7 +222,7 @@ class Trailing(DefaultStrategy):
             self.stop()
             return
 
-        avg_px, ttl_size = mlt(self.face_value(), ttl_sz), self._avg_px()
+        avg_px, ttl_size = self._avg_px(), mlt(self.face_value(), ttl_sz)
         # pnl = calc_pnl(avg_px, px, ttl_size, self._pos_side)
         ap_rate, mp_rate = calc_rate(avg_px, px), calc_rate(self._max_profit_px, avg_px)
         logging.info('%s %d close at %s %s %dx %s pnl=%s avg=%s(%s) max=%s(%s)'

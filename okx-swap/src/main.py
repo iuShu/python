@@ -74,7 +74,8 @@ async def daemon():
             break
         elif sys('stop') == S_FINISH_STOP:
             public.finish_stop()
-            logging.warning("program state set to <finish_stop>")
+            logging.warning("program state set to <finish_stop> and exit conf watching")
+            break
 
 
 if __name__ == '__main__':
