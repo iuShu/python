@@ -21,7 +21,8 @@ def analysis():
                 batch = {}
     # pprint.pprint(repo)
 
-    stat = [.0, 0, 0, 0, .0, .0, 0, 0, .0, .0]
+    stat = [.0, 0, 0, 0, .0, .0, 0, 0, .0, .0, .0, .0]
+    tps, sls = [], []
     for k, batches in repo.items():
         for batch in batches:
             desc = [str(batch['idx']), batch['pos_side'], str(time_diff(batch['st'], batch['et'])), str(batch['pnl'])]
@@ -38,8 +39,12 @@ def analysis():
             stat[1] = len(batch['orders']) - 1 + stat[1]
             if batch['pnl'] > 0:
                 stat[2] += 1
+                stat[10] = batch['pnl'] if batch['pnl'] > stat[10] else stat[10]
+                tps.append(batch['pnl'])
             elif batch['pnl'] <= 0:
                 stat[3] += 1
+                stat[11] = batch['pnl'] if batch['pnl'] < stat[11] else stat[11]
+                sls.append(batch['pnl'])
 
             if '%' in desc[-1] and stat[4] < float(desc[-1][:-1]):
                 stat[4] = float(desc[-1][:-1])
@@ -58,6 +63,13 @@ def analysis():
             if not stat[9] or float(desc[2]) < stat[9]:
                 stat[9] = float(desc[2])
 
+    avg_tp, avg_sl = .0, .0
+    for e in tps:
+        avg_tp = add(avg_tp, e)
+    for e in sls:
+        avg_sl = add(avg_sl, e)
+    avg_tp, avg_sl = div(avg_tp, len(tps)), div(avg_sl, len(sls))
+
     print('ttl pnl is', stat[0])
     print('ttl ord is', stat[1])
     print('ttl bat is', len(repo['CFX']))
@@ -69,6 +81,8 @@ def analysis():
     print('ttl short is', stat[7])
     print('max dur is', stat[8], 'm')
     print('min dur is', stat[9], 'm')
+    print('max tp is', stat[10], avg_tp)
+    print('min sl is', stat[11], avg_sl)
 
 
 def order_fill(line: str, batch: dict) -> dict:
